@@ -89,3 +89,4 @@ require_once dirname( __DIR__ ) . '/includes/class-postporter-api.php';
 require_once dirname( __DIR__ ) . '/includes/class-postporter-tax.php';
 require_once dirname( __DIR__ ) . '/includes/class-postporter-media.php';
 require_once dirname( __DIR__ ) . '/includes/class-postporter-meta.php';
+require_once dirname( __DIR__ ) . '/includes/class-postporter-post.php';
