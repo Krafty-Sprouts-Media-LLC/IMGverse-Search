@@ -8,3 +8,9 @@ if (!defined('ABSPATH')) {
 if (!defined('POSTPORTER_VERSION')) {
     define('POSTPORTER_VERSION', '1.0.0');
 }
+if (!defined('POSTPORTER_PLUGIN_DIR')) {
+    define('POSTPORTER_PLUGIN_DIR', dirname(__DIR__) . '/');
+}
+if (!defined('POSTPORTER_PLUGIN_URL')) {
+    define('POSTPORTER_PLUGIN_URL', 'http://localhost/wp-content/plugins/post-porter/');
+}
