@@ -9,7 +9,9 @@ class PostPorter_Loader {
     }
 
     public static function activate(): void {
-        PostPorter_Log::create_table();
+        if ( class_exists( 'PostPorter_Log' ) ) {
+            PostPorter_Log::create_table();
+        }
     }
 
     public static function deactivate(): void {
