@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
  * Reversible AES-256-CBC encryption for stored app passwords.
  * Key is derived from WordPress AUTH_KEY so it is installation-specific.
@@ -15,6 +16,9 @@ class PostPorter_Crypto {
         $ciphertext = openssl_encrypt(
             $plaintext, 'AES-256-CBC', self::get_key(), OPENSSL_RAW_DATA, $iv
         );
+        if ($ciphertext === false) {
+            throw new \RuntimeException('PostPorter_Crypto: openssl_encrypt failed.');
+        }
         return base64_encode($iv . $ciphertext);
     }
 
