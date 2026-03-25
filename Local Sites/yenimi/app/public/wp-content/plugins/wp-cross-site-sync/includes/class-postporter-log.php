@@ -127,6 +127,15 @@ class PostPorter_Log {
 	 * @throws \InvalidArgumentException If action or status is not a recognised value.
 	 */
 	public static function build_entry( array $data ): array {
+		$required = array( 'post_id', 'site_id', 'action', 'status' );
+		foreach ( $required as $key ) {
+			if ( ! array_key_exists( $key, $data ) ) {
+				throw new \InvalidArgumentException(
+					sprintf( 'PostPorter_Log: required field "%s" is missing.', $key )
+				);
+			}
+		}
+
 		if ( ! in_array( $data['action'], self::VALID_ACTIONS, true ) ) {
 			throw new \InvalidArgumentException(
 				sprintf( 'PostPorter_Log: invalid action "%s".', $data['action'] )
@@ -142,7 +151,7 @@ class PostPorter_Log {
 		return array(
 			'post_id'    => (int) $data['post_id'],
 			'post_title' => sanitize_text_field( $data['post_title'] ?? '' ),
-			'site_id'    => sanitize_key( $data['site_id'] ),
+			'site_id'    => sanitize_key( $data['site_id'] ?? '' ),
 			'site_label' => sanitize_text_field( $data['site_label'] ?? '' ),
 			'action'     => $data['action'],
 			'status'     => $data['status'],
@@ -185,11 +194,12 @@ class PostPorter_Log {
 	public static function get_entries( int $limit = 100, int $offset = 0 ): array {
 		global $wpdb;
 
-		$table = self::get_table_name();
+		$table = esc_sql( self::get_table_name() );
 
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$table} ORDER BY id DESC LIMIT %d OFFSET %d",
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is safe.
+				"SELECT * FROM `{$table}` ORDER BY id DESC LIMIT %d OFFSET %d",
 				$limit,
 				$offset
 			),
@@ -207,13 +217,15 @@ class PostPorter_Log {
 	private static function prune(): void {
 		global $wpdb;
 
-		$table = self::get_table_name();
-		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+		$table = esc_sql( self::get_table_name() );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is derived from wpdb->prefix + constant, safe.
+		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}`" );
 
 		if ( $count > self::MAX_ENTRIES ) {
 			$wpdb->query(
 				$wpdb->prepare(
-					"DELETE FROM {$table} ORDER BY id ASC LIMIT %d",
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is safe.
+					"DELETE FROM `{$table}` ORDER BY id ASC LIMIT %d",
 					$count - self::MAX_ENTRIES
 				)
 			);
