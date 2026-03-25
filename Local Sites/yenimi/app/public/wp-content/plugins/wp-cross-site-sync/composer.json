@@ -9,8 +9,5 @@
     "phpunit/phpunit": "^9.6",
     "brain/monkey": "^2.6",
     "yoast/phpunit-polyfills": "^1.1"
-  },
-  "autoload": {
-    "classmap": ["includes/"]
   }
 }
