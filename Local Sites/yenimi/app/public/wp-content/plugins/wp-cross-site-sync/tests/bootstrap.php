@@ -25,3 +25,4 @@ if ( ! defined( 'POSTPORTER_PLUGIN_URL' ) ) {
 // Load plugin classes for testing (mirrors what the loader does at runtime).
 require_once dirname( __DIR__ ) . '/includes/class-postporter-crypto.php';
 require_once dirname( __DIR__ ) . '/includes/class-postporter-settings.php';
+require_once dirname( __DIR__ ) . '/includes/class-postporter-log.php';
