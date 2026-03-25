@@ -21,6 +21,7 @@ require_once POSTPORTER_PLUGIN_DIR . 'includes/class-postporter-log.php';
 require_once POSTPORTER_PLUGIN_DIR . 'includes/class-postporter-api.php';
 require_once POSTPORTER_PLUGIN_DIR . 'includes/class-postporter-tax.php';
 require_once POSTPORTER_PLUGIN_DIR . 'includes/class-postporter-media.php';
+require_once POSTPORTER_PLUGIN_DIR . 'includes/class-postporter-meta.php';
 
 /**
  * Boots all PostPorter components and registers WordPress hooks.
