@@ -1,0 +1,16 @@
+{
+  "name": "kraftysprouts/post-porter",
+  "description": "Copy, move, or sync WordPress posts to remote sites via REST API.",
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=8.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.6",
+    "brain/monkey": "^2.6",
+    "yoast/phpunit-polyfills": "^1.1"
+  },
+  "autoload": {
+    "classmap": ["includes/"]
+  }
+}
