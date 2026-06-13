@@ -1,0 +1,92 @@
+services:
+  # ---------------------------------------------------------------------------
+  # nginx — reverse proxy. The ONLY container on dokploy-network.
+  # Traefik routes external HTTPS traffic here; nginx proxies /api and /proxy
+  # to the app container on the internal network.
+  # Mirrors KSM WPDokploystack networking pattern exactly.
+  # ---------------------------------------------------------------------------
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "80"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - dokploy-network   # Traefik/Dokploy routing entry point — must be external
+      - internal          # Talks to app on private bridge network
+    deploy:
+      resources:
+        limits:
+          cpus: "${NGINX_CPU_LIMIT:-0.5}"
+          memory: "${NGINX_MEMORY_LIMIT:-128M}"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # app — Node.js/Express: search aggregator + image proxy + static file server.
+  # Internal only — never exposed to the outside world directly.
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: "${APP_CPU_LIMIT:-1.0}"
+          memory: "${APP_MEMORY_LIMIT:-512M}"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # redis — search result cache with 1hr TTL per query key.
+  # Internal only, never exposed outside the Docker network.
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:alpine
+    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-256mb} --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: "${REDIS_CPU_LIMIT:-0.25}"
+          memory: "${REDIS_MEMORY_LIMIT:-256M}"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  dokploy-network:
+    external: true   # Shared Traefik network managed by Dokploy
+  internal:
+    driver: bridge   # Private network: nginx <-> app <-> redis only
+
+volumes:
+  redis_data:
+    name: ${STACK_SLUG:-${COMPOSE_PROJECT_NAME:-imgverse}}_redis_data

@@ -1,0 +1,14 @@
+[variables]
+main_domain = "${domain}"
+# Dokploy injects APP_NAME at deploy. Override STACK_SLUG in Environment for a shorter volume prefix.
+stack_slug = "${APP_NAME}"
+
+[config]
+env = [
+  "STACK_SLUG=${stack_slug}"
+]
+
+[[config.domains]]
+serviceName = "nginx"
+port = 80
+host = "${main_domain}"

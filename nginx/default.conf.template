@@ -1,0 +1,84 @@
+# =============================================================================
+# nginx/default.conf.template
+# IMGverse Search — Nginx reverse proxy configuration.
+# Handles X-Forwarded-Proto from Traefik (same pattern as KSM WPDokploystack).
+# Proxies all requests to the Node.js app container on the internal network.
+#
+# @package IMGverse-Search
+# @since   1.0.0
+# =============================================================================
+
+# Detect HTTPS when behind Traefik reverse proxy or Cloudflare Tunnel.
+map $http_x_forwarded_proto $real_scheme {
+    default   $scheme;
+    https     https;
+}
+
+upstream app {
+    server app:3000;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied expired no-cache no-store private auth;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/json image/svg+xml;
+
+    # Health check endpoint (used by Docker healthcheck — must not proxy to app)
+    location /healthz {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Static assets served by the Node app — cache aggressively at nginx level
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$ {
+        proxy_pass http://app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $real_scheme;
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # All other requests (API, proxy route, HTML) go straight to the Node app
+    location / {
+        proxy_pass http://app;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $real_scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        # Generous timeouts for image proxy streaming (large files)
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_connect_timeout 10s;
+
+        # Buffer settings for image streaming
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+}

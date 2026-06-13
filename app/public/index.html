@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMGverse Search — All Stock Image Providers in One Place</title>
+    <meta name="description" content="Search across Openverse, iNaturalist, Unsplash, Pexels, and Pixabay at once. Open any image in a new tab and save it with a custom name.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+    <header id="site-header">
+        <div class="logo">
+            <div class="logo-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            IMGverse Search
+        </div>
+
+        <form id="search-form" role="search" aria-label="Search stock images">
+            <div class="search-wrapper">
+                <svg class="search-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input
+                    type="search"
+                    id="search-input"
+                    name="q"
+                    placeholder="Search millions of stock images..."
+                    autocomplete="off"
+                    aria-label="Search query"
+                    required>
+            </div>
+        </form>
+    </header>
+
+    <div id="filters-bar" aria-label="Filter by provider">
+        <button class="filter-pill active" data-provider="">All Providers</button>
+        <button class="filter-pill" data-provider="openverse">Openverse</button>
+        <button class="filter-pill" data-provider="unsplash">Unsplash</button>
+        <button class="filter-pill" data-provider="pexels">Pexels</button>
+        <button class="filter-pill" data-provider="inaturalist">iNaturalist</button>
+        <button class="filter-pill" data-provider="pixabay">Pixabay</button>
+    </div>
+
+    <main id="main-content">
+        <div id="empty-state" class="empty-state" aria-live="polite">
+            <div class="empty-icon" aria-hidden="true">
+                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <h2>Search for anything</h2>
+            <p>Find images across Openverse, iNaturalist, Unsplash, Pexels, and Pixabay — all in one search.</p>
+        </div>
+
+        <div id="grid" class="grid" aria-label="Search results" aria-live="polite"></div>
+
+        <div id="loader" class="loader hidden" aria-label="Loading results">
+            <span></span><span></span><span></span>
+        </div>
+
+        <div id="sentinel" aria-hidden="true"></div>
+    </main>
+
+    <script src="/app.js"></script>
+</body>
+</html>

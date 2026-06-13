@@ -1,0 +1,39 @@
+name: Stack Smoke Test
+
+# =============================================================================
+# smoke-test.yml
+# IMGverse Search — Integration test: full Docker Compose stack verification.
+# Mirrors KSM WPDokploystack smoke-test.yml pattern.
+#
+# @package IMGverse-Search
+# @since   1.0.0
+# =============================================================================
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'nginx/**'
+      - 'docker-compose.yml'
+      - 'tests/**'
+      - '.github/workflows/smoke-test.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    name: Integration Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run smoke test
+        run: bash tests/smoke-test.sh
