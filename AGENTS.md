@@ -52,6 +52,6 @@ Instructions for AI agents and contributors working on **IMGverse Search**.
 
 ## Provider notes
 
-- **Openverse** and **iNaturalist** need no API keys.
+- **Openverse OAuth:** see [`docs/OPENVERSE-OAUTH.md`](docs/OPENVERSE-OAUTH.md) — full registration/token guide for fixing HTTP 403 on VPS hosts (reusable across projects).
 - **Unsplash, Pexels, Pixabay** require keys in `.env`.
 - Openverse failures previously produced **no log lines** because errors were swallowed in the adapter; always log provider errors when touching that code.

@@ -1,6 +1,6 @@
 # IMGverse Search
 
-Self-hosted stock image aggregator. One search across Openverse, iNaturalist, Unsplash, Pexels, and Pixabay — with a built-in image proxy that enables right-click **Save As** with any custom filename, directly from the browser.
+Self-hosted stock image aggregator. One search across Openverse, iNaturalist, Unsplash, Pexels, and Pixabay — images served directly from each provider's CDN in their native format.
 
 Deployed as a single Dokploy Docker Compose stack. Same zero-stress pattern as KSM WPDokploystack.
 
@@ -16,18 +16,17 @@ Deployed as a single Dokploy Docker Compose stack. Same zero-stress pattern as K
 
 ---
 
-## How the Right-Click Save Works
+## How Images Work
 
 ```
 User searches "monkey"
-  → Express fans out to all APIs at once (Promise.all)
-  → Results return with image URLs rewritten to /proxy?url=...
-  → User clicks "Open full image" → opens /proxy URL in new tab
-  → /proxy fetches image from provider, converts to JPEG via sharp
-  → Browser displays raw JPEG → right-click → Save image as → done
+  → Express fans out to all APIs at once
+  → Grid thumbnails load directly from provider CDNs (JPEG, WebP, AVIF — whatever the provider serves)
+  → "Open full image" links directly to the provider's full-res CDN URL
+  → Right-click → Save As → you get the file in the provider's native format
 ```
 
-The `/proxy` route sets `Content-Type: image/jpeg` with **no** `Content-Disposition` header. This forces the browser to display the image natively rather than triggering a download dialog — enabling right-click → Save As with any filename you choose.
+No format conversion. No proxy in the normal user flow. Images are exactly what Unsplash, Pexels, Pixabay, etc. return from their APIs.
 
 ---
 
@@ -45,6 +44,8 @@ The `/proxy` route sets `Content-Type: image/jpeg` with **no** `Content-Disposit
    UNSPLASH_KEY=your_unsplash_key
    PEXELS_KEY=your_pexels_key
    PIXABAY_KEY=your_pixabay_key
+   OPENVERSE_CLIENT_ID=your_openverse_client_id
+   OPENVERSE_CLIENT_SECRET=your_openverse_client_secret
    ```
    > Use a short `STACK_SLUG` (e.g. `imgverse`) **before the first deploy** so volumes are named `imgverse_redis_data` not a long Dokploy-generated name.
 5. Click **Deploy**
@@ -92,10 +93,16 @@ All variables are documented in [`.env.example`](.env.example).
 | `UNSPLASH_KEY` | No | — | Unsplash API key (free at unsplash.com/developers) |
 | `PEXELS_KEY` | No | — | Pexels API key (free at pexels.com/api) |
 | `PIXABAY_KEY` | No | — | Pixabay API key (free at pixabay.com/api) |
+| `OPENVERSE_CLIENT_ID` | No* | — | Openverse OAuth client ID — *required on many VPS/datacenter hosts |
+| `OPENVERSE_CLIENT_SECRET` | No* | — | Openverse OAuth client secret |
 | `PROXY_MAX_SIZE_MB` | No | `20` | Maximum proxied image size in MB |
 | `REDIS_MAXMEMORY` | No | `256mb` | Redis memory cap |
 
-> **Openverse** and **iNaturalist** need no API keys — they work out of the box.
+> **Openverse** on VPS hosts requires OAuth (HTTP 403 otherwise). Full guide: **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)**. **iNaturalist** needs no key.
+
+### Openverse OAuth (403 fix on VPS)
+
+See **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)** — register, verify email, get token, code examples (Node, Python, curl, PowerShell), troubleshooting. Copy to any project hitting Openverse 403.
 
 ---
 
@@ -103,7 +110,7 @@ All variables are documented in [`.env.example`](.env.example).
 
 | Provider | Key Required | Free Limit | Notes |
 |----------|-------------|------------|-------|
-| Openverse | No | Unlimited | CC-licensed; includes Flickr content |
+| Openverse | OAuth recommended | Unlimited | CC-licensed; OAuth required on many VPS/datacenter IPs (HTTP 403 otherwise) |
 | iNaturalist | No | Unlimited | Nature & wildlife photography |
 | Pixabay | Yes (free) | 100 req/hr | Register at pixabay.com/api |
 | Unsplash | Yes (free) | 50 req/hr | Register at unsplash.com/developers |

@@ -80,25 +80,116 @@ const ALLOWED_DOMAINS = new Set([
   'iiif.si.edu',
 ]);
 
+/**
+ * Normalize an output format query param.
+ *
+ * @param {string} [raw] - Requested format.
+ * @returns {'jpeg'|'webp'|'png'} Supported output format.
+ */
+function parseOutputFormat(raw) {
+  const fmt = String(raw || 'jpg').toLowerCase();
+  if (fmt === 'webp') return 'webp';
+  if (fmt === 'png') return 'png';
+  return 'jpeg'; // jpg and jpeg are equivalent
+}
+
+/**
+ * Convert upstream bytes to the requested output format.
+ *
+ * @param {Buffer} buffer - Raw upstream image bytes.
+ * @param {'jpeg'|'webp'|'png'} format - Target format.
+ * @returns {Promise<{ body: Buffer, contentType: string }>}
+ */
+async function encodeImage(buffer, format) {
+  const image = sharp(buffer);
+
+  if (format === 'webp') {
+    const body = await image.webp({ quality: 88 }).toBuffer();
+    return { body, contentType: 'image/webp' };
+  }
+
+  if (format === 'png') {
+    const body = await image.png({ compressionLevel: 8 }).toBuffer();
+    return { body, contentType: 'image/png' };
+  }
+
+  const body = await image.jpeg({ quality: 88, progressive: true }).toBuffer();
+  return { body, contentType: 'image/jpeg' };
+}
+
 const MAX_SIZE_BYTES = (parseInt(process.env.PROXY_MAX_SIZE_MB, 10) || 20) * 1024 * 1024;
+const UA = 'IMGverse-Search/1.0 (image proxy; +https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+
+/**
+ * Build upstream request headers. Some CDNs reject bare server fetches.
+ *
+ * @param {URL} parsed - Parsed upstream image URL.
+ * @returns {Record<string, string>}
+ */
+function upstreamHeaders(parsed) {
+  const headers = {
+    'User-Agent':      UA,
+    'Accept':          'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+
+  if (parsed.hostname.includes('unsplash')) {
+    headers.Referer = 'https://unsplash.com/';
+  } else if (parsed.hostname.includes('pexels')) {
+    headers.Referer = 'https://www.pexels.com/';
+  } else if (parsed.hostname.includes('pixabay')) {
+    headers.Referer = 'https://pixabay.com/';
+  }
+
+  return headers;
+}
+
+/**
+ * Fetch an upstream image with one automatic retry on transient network errors.
+ *
+ * @param {URL}    parsed - Parsed upstream image URL.
+ * @param {number} tries  - Maximum attempts.
+ * @returns {Promise<import('node-fetch').Response>}
+ */
+async function fetchUpstream(parsed, tries = 2) {
+  let lastErr;
+
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    try {
+      return await fetch(parsed.toString(), {
+        headers:  upstreamHeaders(parsed),
+        redirect: 'follow',
+        signal:   AbortSignal.timeout(15_000),
+      });
+    } catch (err) {
+      lastErr = err;
+      if (attempt < tries) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+    }
+  }
+
+  throw lastErr;
+}
 
 /**
  * GET /proxy
  *
  * Query params:
  *   url  {string}  URL-encoded image URL from a provider CDN (required)
- *   fmt  {string}  Output format: 'jpg' (default) or 'webp'
+ *   fmt  {string}  Output format: 'jpg' | 'jpeg' | 'webp' | 'png' (default 'jpg')
  *
  * The key behaviours:
  *  - Validates domain against whitelist (security)
  *  - Forces HTTPS upstream
- *  - Converts any format (AVIF, WebP, PNG…) to JPEG via sharp
- *  - Sets Content-Type: image/jpeg — NO Content-Disposition
+ *  - Converts any upstream format (AVIF, WebP, PNG…) to the requested output format
+ *  - Sets image/* Content-Type with NO Content-Disposition
  *  - This makes the browser display the raw image in the tab,
  *    enabling right-click → "Save image as" with any custom name.
  */
 router.get('/', async (req, res) => {
   const rawUrl = req.query.url;
+  const format = parseOutputFormat(req.query.fmt);
 
   if (!rawUrl) {
     return res.status(400).send('Missing url parameter.');
@@ -122,15 +213,10 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const upstream = await fetch(parsed.toString(), {
-      headers: {
-        'User-Agent': 'IMGverse-Search/1.0 (image proxy)',
-        'Accept':     'image/*',
-      },
-      signal: AbortSignal.timeout(15000),
-    });
+    const upstream = await fetchUpstream(parsed);
 
     if (!upstream.ok) {
+      console.error(`[IMGverse/proxy] Upstream HTTP ${upstream.status} for ${parsed.hostname}`);
       return res.status(upstream.status).send('Upstream fetch failed.');
     }
 
@@ -140,26 +226,23 @@ router.get('/', async (req, res) => {
       return res.status(413).send('Image too large.');
     }
 
-    const buffer = await upstream.arrayBuffer();
-
-    // Convert to JPEG via sharp (handles AVIF → JPEG automatically)
-    const jpeg = await sharp(Buffer.from(buffer))
-      .jpeg({ quality: 88, progressive: true })
-      .toBuffer();
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    const { body, contentType } = await encodeImage(buffer, format);
 
     // Stream back to the browser.
     // NO Content-Disposition header — this is what makes the browser
     // display the image natively in the tab rather than triggering a download.
     res.set({
-      'Content-Type':  'image/jpeg',
+      'Content-Type':  contentType,
       'Cache-Control': 'public, max-age=86400',
-      'Content-Length': jpeg.length,
+      'Content-Length': body.length,
     });
 
-    return res.send(jpeg);
+    return res.send(body);
 
   } catch (err) {
-    console.error('[IMGverse/proxy] Error:', err.message);
+    const detail = err.message || err.cause?.message || err.cause?.code || err.code || String(err);
+    console.error('[IMGverse/proxy] Error: request to', parsed.toString(), 'failed, reason:', detail);
     return res.status(500).send('Proxy error.');
   }
 });

@@ -12,8 +12,7 @@
 
 /**
  * Build a proxied URL pointing to our /proxy endpoint.
- * This rewrites ALL provider image URLs so they go through our server,
- * which solves CORS, AVIF→JPEG conversion, and the right-click Save-As flow.
+ * Used for the "Open full image" flow only — grid thumbnails load direct CDN URLs.
  *
  * @param {string} rawUrl    - Original provider image URL.
  * @param {string} [fmt]     - Output format hint ('jpg' or 'webp'). Default 'jpg'.
@@ -68,8 +67,8 @@ export function interleave(groups) {
  * {
  *   id:         string  — "<provider>-<originalId>"
  *   provider:   string  — lowercase provider name
- *   thumb:      string  — proxied thumbnail URL  (/proxy?url=...&fmt=jpg)
- *   full:       string  — proxied full-res URL    (/proxy?url=...&fmt=jpg)
+ *   thumb:      string  — direct CDN URL (native provider format)
+ *   full:       string  — direct CDN full-res URL (native provider format)
  *   width:      number
  *   height:     number
  *   alt:        string  — accessible description
@@ -98,8 +97,8 @@ export function normalize({
   return {
     id:        `${provider}-${id}`,
     provider,
-    thumb:     proxyUrl(thumbUrl),
-    full:      proxyUrl(fullUrl),
+    thumb:     thumbUrl,
+    full:      fullUrl,
     width,
     height,
     alt,

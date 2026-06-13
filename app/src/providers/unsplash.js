@@ -2,7 +2,7 @@
 // src/providers/unsplash.js
 // IMGverse Search — Unsplash provider adapter.
 // Requires UNSPLASH_KEY env var. Free tier: 50 req/hour.
-// AVIF problem is solved automatically by the /proxy route (sharp converts to JPEG).
+// AVIF/WebP/JPEG — served natively from the provider CDN (no conversion).
 // Docs: https://unsplash.com/documentation
 //
 // @package IMGverse-Search

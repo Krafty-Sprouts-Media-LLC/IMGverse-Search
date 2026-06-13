@@ -5,6 +5,47 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.13] - 13/06/2026
+
+### Added
+- `docs/OPENVERSE-OAUTH.md` — reusable guide for Openverse OAuth registration, email verification, token flow, and fixing HTTP 403 on VPS/cloud hosts
+
+## [1.0.12] - 13/06/2026
+
+### Changed
+- **Direct provider URLs everywhere** — thumbnails and "Open full image" now link straight to each provider's CDN; no conversion, no format picker, no proxy in the normal flow
+- Removed "Save as: JPG / WebP / PNG" UI — you get whatever format the provider serves (JPEG, WebP, AVIF, PNG, etc.)
+
+## [1.0.11] - 13/06/2026
+
+### Added
+- Save format selector: **JPG / WebP / PNG** pills — "Open full image" proxy now honours `fmt=jpg|jpeg|webp|png`
+- API: `fullRaw` field on each result for client-side format URL building
+
+### Fixed
+- Proxy `fmt` query param was documented but ignored — all saves were forced to JPEG
+
+## [1.0.10] - 13/06/2026
+
+### Fixed
+- Grid thumbnails now load **directly from provider CDNs** instead of through `/proxy` — fixes mass proxy failures on VPS hosts and cuts server load
+- Proxy: prefer IPv4 (`dns.setDefaultResultOrder('ipv4first')`) — fixes silent fetch failures on Docker hosts with broken IPv6
+- Proxy: provider-specific Referer headers, richer Accept header, and one automatic retry on transient network errors
+
+### Changed
+- `/proxy` is now used only for the **Open full image** save flow; grid `<img>` tags use direct CDN URLs
+
+## [1.0.9] - 13/06/2026
+
+### Added
+- Openverse OAuth2 support via `OPENVERSE_CLIENT_ID` / `OPENVERSE_CLIENT_SECRET` — fixes HTTP 403 from Cloudflare on VPS/datacenter IPs (Hetzner, etc.)
+- `openverse-auth.js` — client-credentials token helper with in-memory cache and auto-refresh
+- README: step-by-step Openverse OAuth registration guide
+
+### Fixed
+- Openverse: descriptive User-Agent and actionable 403 log message when OAuth credentials are missing
+- Proxy: log full failure reason when `err.message` is empty (ETIMEDOUT, ENOTFOUND, etc.)
+
 ## [1.0.8] - 13/06/2026
 
 ### Added

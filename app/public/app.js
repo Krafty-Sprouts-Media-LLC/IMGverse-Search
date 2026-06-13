@@ -2,8 +2,7 @@
  * app.js
  * IMGverse Search — Vanilla JS frontend.
  * Handles: search form, provider filter chips, orientation filter chips,
- * masonry grid rendering, right-click/open-in-tab flow via proxied URLs,
- * infinite scroll.
+ * masonry grid rendering, direct provider CDN links, infinite scroll.
  *
  * @package IMGverse-Search
  * @since   1.0.0
@@ -32,7 +31,7 @@ let currentProvider    = '';
 let currentOrientation = '';
 let isLoading          = false;
 let hasMore            = true;
-let seenIds            = new Set();  // deduplication — tracks IDs already rendered
+let seenIds            = new Set();
 
 // ---------------------------------------------------------------------------
 // Search form submit
@@ -75,7 +74,7 @@ function startNewSearch(q) {
     currentQuery = q;
     currentPage  = 1;
     hasMore      = true;
-    seenIds      = new Set();  // reset seen IDs for a fresh search
+    seenIds      = new Set();
     grid.innerHTML = '';
     emptyState.classList.add('hidden');
     fetchPage();
@@ -121,7 +120,6 @@ async function fetchPage() {
 // Render image cards into the masonry grid
 // ---------------------------------------------------------------------------
 function renderCards(results) {
-    // Deduplicate — skip any image whose ID we've already rendered
     const fresh = results.filter((img) => {
         if (seenIds.has(img.id)) return false;
         seenIds.add(img.id);
@@ -155,7 +153,7 @@ function renderCards(results) {
                         href="${escHtml(img.full)}"
                         target="_blank"
                         rel="noopener"
-                        title="Open full-resolution image in a new tab — then right-click to Save As"
+                        title="Open full-resolution image from the provider — right-click to Save As"
                     >
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                         Open full image
