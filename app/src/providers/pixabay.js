@@ -47,8 +47,8 @@ export async function search(query, page = 1) {
       normalize({
         id:        item.id,
         provider:  'pixabay',
-        thumbUrl:  item.webformatURL,    // 640px — right-click Save As gives a usable image
-        fullUrl:   item.largeImageURL,   // max resolution for "Open full image" button
+        thumbUrl:  item.largeImageURL,   // 1280px — largest freely accessible Pixabay size
+        fullUrl:   item.largeImageURL,   // same — fullHDURL/imageURL require special API approval
         width:     item.imageWidth,
         height:    item.imageHeight,
         alt:       item.tags || '',

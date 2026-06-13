@@ -5,6 +5,11 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 13/06/2026
+
+### Fixed
+- Pixabay: switched `thumbUrl` from `webformatURL` (640px max) to `largeImageURL` (1280px) — `webformatURL` is Pixabay's web-preview size, not a full image
+
 ## [1.0.4] - 13/06/2026
 
 ### Fixed
