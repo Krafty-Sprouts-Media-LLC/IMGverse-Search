@@ -173,6 +173,60 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+ * Orientation filter bar
+ * --------------------------------------------------------------------------- */
+#orientation-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 2rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    background: #FAFAFA;
+}
+
+#orientation-bar::-webkit-scrollbar { display: none; }
+
+.filter-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    margin-right: 0.25rem;
+}
+
+.orient-pill {
+    padding: 0.35rem 0.9rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--text-base);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all var(--transition);
+}
+
+.orient-pill:hover {
+    border-color: var(--brand);
+    color: var(--brand);
+}
+
+.orient-pill.active {
+    background: var(--brand-gradient);
+    border-color: transparent;
+    color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
  * Main layout
  * --------------------------------------------------------------------------- */
 #main-content {

@@ -5,6 +5,14 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 13/06/2026
+
+### Added
+- Orientation filter: Landscape / Portrait / Square pills added below provider filter bar
+- Unsplash, Pexels, Pixabay: orientation passed natively to each provider API
+- Openverse, iNaturalist: client-side aspect-ratio filter (w/h ratio thresholds) applied after fetch
+- Orientation included in Redis cache key so filtered results cache independently
+
 ## [1.0.5] - 13/06/2026
 
 ### Fixed

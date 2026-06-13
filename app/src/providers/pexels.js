@@ -19,15 +19,18 @@ const BASE = 'https://api.pexels.com/v1/search';
  * Search Pexels for images matching the given query.
  * Returns empty array if PEXELS_KEY is not set.
  *
- * @param {string} query - Search term.
- * @param {number} page  - Page number (1-indexed).
+ * @param {string} query       - Search term.
+ * @param {number} page        - Page number (1-indexed).
+ * @param {string} orientation - '' | 'landscape' | 'portrait' | 'square'
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
-export async function search(query, page = 1) {
+export async function search(query, page = 1, orientation = '') {
   if (!process.env.PEXELS_KEY) return [];
 
   try {
+    // Pexels supports orientation natively with the same names (landscape/portrait/square)
     const params = new URLSearchParams({ query, page, per_page: 20 });
+    if (orientation) params.set('orientation', orientation);
     const res = await fetch(`${BASE}?${params}`, {
       headers: { Authorization: process.env.PEXELS_KEY },
       signal: AbortSignal.timeout(8000),

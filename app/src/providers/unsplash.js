@@ -20,15 +20,19 @@ const BASE = 'https://api.unsplash.com/search/photos';
  * Search Unsplash for images matching the given query.
  * Returns empty array if UNSPLASH_KEY is not set.
  *
- * @param {string} query - Search term.
- * @param {number} page  - Page number (1-indexed).
+ * @param {string} query       - Search term.
+ * @param {number} page        - Page number (1-indexed).
+ * @param {string} orientation - '' | 'landscape' | 'portrait' | 'square'
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
-export async function search(query, page = 1) {
+export async function search(query, page = 1, orientation = '') {
   if (!process.env.UNSPLASH_KEY) return [];
 
   try {
+    // Unsplash uses 'squarish' for square; map our canonical value
+    const orientMap = { landscape: 'landscape', portrait: 'portrait', square: 'squarish' };
     const params = new URLSearchParams({ query, page, per_page: 20 });
+    if (orientation && orientMap[orientation]) params.set('orientation', orientMap[orientation]);
     const res = await fetch(`${BASE}?${params}`, {
       headers: {
         Authorization: `Client-ID ${process.env.UNSPLASH_KEY}`,

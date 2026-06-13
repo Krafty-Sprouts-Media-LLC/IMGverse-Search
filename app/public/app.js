@@ -1,8 +1,9 @@
 /* =============================================================================
  * app.js
  * IMGverse Search — Vanilla JS frontend.
- * Handles: search form, provider filter chips, masonry grid rendering,
- * right-click/open-in-tab flow via proxied URLs, infinite scroll.
+ * Handles: search form, provider filter chips, orientation filter chips,
+ * masonry grid rendering, right-click/open-in-tab flow via proxied URLs,
+ * infinite scroll.
  *
  * @package IMGverse-Search
  * @since   1.0.0
@@ -13,22 +14,24 @@
 // ---------------------------------------------------------------------------
 // DOM references
 // ---------------------------------------------------------------------------
-const searchForm   = document.getElementById('search-form');
-const searchInput  = document.getElementById('search-input');
-const grid         = document.getElementById('grid');
-const loader       = document.getElementById('loader');
-const emptyState   = document.getElementById('empty-state');
-const sentinel     = document.getElementById('sentinel');
-const filterPills  = document.querySelectorAll('.filter-pill');
+const searchForm    = document.getElementById('search-form');
+const searchInput   = document.getElementById('search-input');
+const grid          = document.getElementById('grid');
+const loader        = document.getElementById('loader');
+const emptyState    = document.getElementById('empty-state');
+const sentinel      = document.getElementById('sentinel');
+const filterPills   = document.querySelectorAll('.filter-pill');
+const orientPills   = document.querySelectorAll('.orient-pill');
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-let currentQuery    = '';
-let currentPage     = 1;
-let currentProvider = '';
-let isLoading       = false;
-let hasMore         = true;
+let currentQuery       = '';
+let currentPage        = 1;
+let currentProvider    = '';
+let currentOrientation = '';   // '' | 'landscape' | 'portrait' | 'square'
+let isLoading          = false;
+let hasMore            = true;
 
 // ---------------------------------------------------------------------------
 // Search form submit
@@ -48,7 +51,18 @@ filterPills.forEach((pill) => {
         filterPills.forEach((p) => p.classList.remove('active'));
         pill.classList.add('active');
         currentProvider = pill.dataset.provider || '';
+        if (currentQuery) startNewSearch(currentQuery);
+    });
+});
 
+// ---------------------------------------------------------------------------
+// Orientation filter pills
+// ---------------------------------------------------------------------------
+orientPills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+        orientPills.forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentOrientation = pill.dataset.orientation || '';
         if (currentQuery) startNewSearch(currentQuery);
     });
 });
@@ -76,7 +90,8 @@ async function fetchPage() {
 
     try {
         const params = new URLSearchParams({ q: currentQuery, page: currentPage });
-        if (currentProvider) params.set('providers', currentProvider);
+        if (currentProvider)    params.set('providers',    currentProvider);
+        if (currentOrientation) params.set('orientation',  currentOrientation);
 
         const res  = await fetch(`/api/search?${params}`);
         const data = await res.json();
@@ -89,7 +104,6 @@ async function fetchPage() {
         } else {
             renderCards(data.results);
             currentPage++;
-            // If fewer than 10 results came back, don't attempt another page
             if (data.results.length < 10) hasMore = false;
         }
     } catch (err) {
@@ -109,7 +123,6 @@ function renderCards(results) {
         const figure = document.createElement('figure');
         figure.className = 'img-card';
 
-        // Natural aspect ratio from API metadata if available
         const aspectStyle = img.width && img.height
             ? `aspect-ratio: ${img.width} / ${img.height};`
             : '';
