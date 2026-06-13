@@ -55,8 +55,11 @@ router.get('/', async (req, res) => {
 
   const payload = { total: results.length, page, orientation, results };
 
-  // Cache for 1 hour
-  await set(cacheKey, payload, 3600);
+  // Cache successful searches only — empty results are often transient (timeout,
+  // upstream outage) and must not be pinned in Redis for an hour.
+  if (results.length > 0) {
+    await set(cacheKey, payload, 3600);
+  }
 
   return res.json(payload);
 });

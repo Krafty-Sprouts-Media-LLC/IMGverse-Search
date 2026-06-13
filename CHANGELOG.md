@@ -5,6 +5,16 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 13/06/2026
+
+### Added
+- `AGENTS.md` — agent/contributor instructions; **tag every version/release and push the tag** to trigger GitHub Releases
+- Provider logging: Openverse HTTP/network failures now emit `[IMGverse/openverse]` lines; aggregator logs zero-result and rejected providers
+
+### Fixed
+- Openverse: increased API timeout from 8s to 15s (matches proxy) — slow upstream responses no longer fail silently
+- Search cache: empty result sets are no longer cached for 1 hour — prevents stale "no results" after transient provider outages
+
 ## [1.0.7] - 13/06/2026
 
 ### Added

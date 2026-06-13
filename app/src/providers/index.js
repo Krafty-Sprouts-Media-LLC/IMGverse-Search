@@ -91,10 +91,27 @@ export async function searchAll(query, page = 1, filter = [], orientation = '') 
     )
   );
 
+  // Log rejected providers (fulfilled adapters log their own HTTP/network errors)
+  settled.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.error(
+        `[IMGverse/providers] ${active[i]?.name} rejected for q="${query}":`,
+        result.reason?.message || result.reason
+      );
+    }
+  });
+
   // Collect each provider's results as a separate group (preserving order)
   const groups = settled.map((r) =>
     r.status === 'fulfilled' ? r.value : []
   );
+
+  // Log when a provider returns zero results (helps diagnose silent API failures)
+  groups.forEach((group, i) => {
+    if (group.length === 0) {
+      console.warn(`[IMGverse/providers] ${active[i]?.name} returned 0 results for q="${query}" page=${page}`);
+    }
+  });
 
   // Client-side orientation filter for non-native providers
   const filtered = groups.map((group, i) =>

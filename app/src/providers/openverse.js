@@ -27,10 +27,13 @@ export async function search(query, page = 1) {
     const params = new URLSearchParams({ q: query, page, page_size: 20 });
     const res = await fetch(`${BASE}?${params}`, {
       headers: { 'User-Agent': 'IMGverse-Search/1.0' },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(15000),
     });
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error(`[IMGverse/openverse] API returned HTTP ${res.status} for q="${query}" page=${page}`);
+      return [];
+    }
 
     const data = await res.json();
     return (data.results || []).map((item) =>
@@ -48,7 +51,8 @@ export async function search(query, page = 1) {
         sourceUrl:  item.foreign_landing_url || '',
       })
     );
-  } catch {
+  } catch (err) {
+    console.error(`[IMGverse/openverse] Search failed for q="${query}" page=${page}:`, err.message);
     return [];
   }
 }
