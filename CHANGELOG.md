@@ -5,6 +5,15 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 13/06/2026
+
+### Added
+- `interleave()` utility: round-robin interleaves results from each provider, preserving each provider's internal relevance order instead of random shuffle
+
+### Fixed
+- Client-side deduplication: `seenIds` Set tracks rendered image IDs across infinite scroll pages — same image can no longer reappear on subsequent pages
+- `seenIds` resets on every new search/filter change so stale IDs don't bleed across searches
+
 ## [1.0.6] - 13/06/2026
 
 ### Added

@@ -40,6 +40,27 @@ export function shuffle(arr) {
 }
 
 /**
+ * Round-robin interleave multiple arrays.
+ * Preserves each array's internal order (relevance ranking) while
+ * mixing sources so results don't appear in provider blocks.
+ *
+ * Example: interleave([[A1,A2],[B1,B2],[C1]]) → [A1,B1,C1,A2,B2]
+ *
+ * @param {Array[]} groups - Array of arrays to interleave.
+ * @returns {Array}        - Interleaved flat array.
+ */
+export function interleave(groups) {
+  const result  = [];
+  const maxLen  = Math.max(0, ...groups.map((g) => g.length));
+  for (let i = 0; i < maxLen; i++) {
+    for (const group of groups) {
+      if (i < group.length) result.push(group[i]);
+    }
+  }
+  return result;
+}
+
+/**
  * Normalize a raw provider result into the canonical ImageResult shape.
  * Every provider adapter MUST call this before returning results.
  *

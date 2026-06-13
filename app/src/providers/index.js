@@ -2,9 +2,14 @@
 // src/providers/index.js
 // IMGverse Search — Provider aggregator (Search Controller).
 // Fans out to all active providers simultaneously via Promise.all,
-// merges and shuffles results. Supports orientation filtering:
-//   - Providers with native support (Unsplash, Pexels, Pixabay) get the param
-//   - Providers without (Openverse, iNaturalist) are filtered by aspect ratio
+// then interleaves results round-robin to preserve each provider's
+// internal relevance ranking while mixing sources.
+//
+// Orientation support:
+//   - Providers with native support (Unsplash, Pexels, Pixabay) receive
+//     the param in their API request.
+//   - Providers without (Openverse, iNaturalist) are filtered client-side
+//     by aspect ratio after results are returned.
 //
 // @package IMGverse-Search
 // @since   1.0.0
@@ -17,11 +22,19 @@ import { search as inaturalist } from './inaturalist.js';
 import { search as unsplash    } from './unsplash.js';
 import { search as pexels      } from './pexels.js';
 import { search as pixabay     } from './pixabay.js';
-import { shuffle } from '../utils.js';
+import { interleave } from '../utils.js';
+
+// Providers that accept an orientation param natively in their API
+const NATIVE_ORIENTATION = new Set(['unsplash', 'pexels', 'pixabay']);
 
 /**
  * Client-side orientation filter for providers that don't support it natively.
- * Skips images where width/height are unknown (0) to avoid false negatives.
+ * Images with unknown dimensions (0) are included rather than excluded.
+ *
+ * Thresholds:
+ *   landscape  w/h > 1.15
+ *   portrait   w/h < 0.87
+ *   square     0.87 ≤ w/h ≤ 1.15
  *
  * @param {object[]} results     - Canonical ImageResult array.
  * @param {string}   orientation - '' | 'landscape' | 'portrait' | 'square'
@@ -29,9 +42,8 @@ import { shuffle } from '../utils.js';
  */
 function filterByOrientation(results, orientation) {
   if (!orientation) return results;
-
   return results.filter(({ width, height }) => {
-    if (!width || !height) return true; // unknown — include rather than exclude
+    if (!width || !height) return true;
     const ratio = width / height;
     if (orientation === 'landscape') return ratio > 1.15;
     if (orientation === 'portrait')  return ratio < 0.87;
@@ -41,20 +53,23 @@ function filterByOrientation(results, orientation) {
 }
 
 /**
- * Search all active providers simultaneously and return merged results.
- * A provider is "active" if it either needs no key or its key is present in env.
- * Failed providers return empty arrays — they never crash the whole search.
+ * Search all active providers simultaneously and return interleaved results.
+ *
+ * Results are interleaved round-robin per provider so that:
+ *   - Each provider's top relevance result appears near the top of the feed
+ *   - No single provider dominates a page
+ *   - Random shuffling (which destroyed relevance order) is no longer used
+ *
+ * A provider is "active" if it either needs no key or its env key is set.
+ * Failed providers silently return [] and never crash the whole search.
  *
  * @param {string}   query        - Search term.
  * @param {number}   page         - Page number (1-indexed).
  * @param {string[]} [filter]     - Optional provider whitelist e.g. ['pexels','unsplash'].
  * @param {string}   [orientation]- '' | 'landscape' | 'portrait' | 'square'
- * @returns {Promise<object[]>} Shuffled, merged array of canonical ImageResult objects.
+ * @returns {Promise<object[]>} Interleaved array of canonical ImageResult objects.
  */
 export async function searchAll(query, page = 1, filter = [], orientation = '') {
-  // Providers with native orientation param support
-  const nativeOrientation = new Set(['unsplash', 'pexels', 'pixabay']);
-
   const all = [
     { name: 'openverse',   fn: openverse   },
     { name: 'inaturalist', fn: inaturalist },
@@ -67,21 +82,29 @@ export async function searchAll(query, page = 1, filter = [], orientation = '') 
     ? all.filter((p) => filter.includes(p.name))
     : all;
 
-  // Fan out concurrently — pass orientation to native supporters only
+  // Fan out to all providers concurrently
   const settled = await Promise.allSettled(
     active.map((p) =>
-      nativeOrientation.has(p.name)
-        ? p.fn(query, page, orientation)
-        : p.fn(query, page)
+      NATIVE_ORIENTATION.has(p.name)
+        ? p.fn(query, page, orientation)   // pass orientation natively
+        : p.fn(query, page)                // will be filtered below
     )
   );
 
-  const merged = settled.flatMap((r) =>
+  // Collect each provider's results as a separate group (preserving order)
+  const groups = settled.map((r) =>
     r.status === 'fulfilled' ? r.value : []
   );
 
-  // Client-side fallback filter for non-native providers (Openverse, iNaturalist)
-  const filtered = filterByOrientation(merged, orientation);
+  // Client-side orientation filter for non-native providers
+  const filtered = groups.map((group, i) =>
+    NATIVE_ORIENTATION.has(active[i]?.name)
+      ? group
+      : filterByOrientation(group, orientation)
+  );
 
-  return shuffle(filtered);
+  // Round-robin interleave — provider 1 top result, provider 2 top result, …
+  // then provider 1 second result, provider 2 second result, …
+  // This keeps each provider's relevance ranking intact while mixing sources.
+  return interleave(filtered);
 }

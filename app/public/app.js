@@ -29,9 +29,10 @@ const orientPills   = document.querySelectorAll('.orient-pill');
 let currentQuery       = '';
 let currentPage        = 1;
 let currentProvider    = '';
-let currentOrientation = '';   // '' | 'landscape' | 'portrait' | 'square'
+let currentOrientation = '';
 let isLoading          = false;
 let hasMore            = true;
+let seenIds            = new Set();  // deduplication — tracks IDs already rendered
 
 // ---------------------------------------------------------------------------
 // Search form submit
@@ -74,6 +75,7 @@ function startNewSearch(q) {
     currentQuery = q;
     currentPage  = 1;
     hasMore      = true;
+    seenIds      = new Set();  // reset seen IDs for a fresh search
     grid.innerHTML = '';
     emptyState.classList.add('hidden');
     fetchPage();
@@ -119,7 +121,14 @@ async function fetchPage() {
 // Render image cards into the masonry grid
 // ---------------------------------------------------------------------------
 function renderCards(results) {
-    results.forEach((img) => {
+    // Deduplicate — skip any image whose ID we've already rendered
+    const fresh = results.filter((img) => {
+        if (seenIds.has(img.id)) return false;
+        seenIds.add(img.id);
+        return true;
+    });
+
+    fresh.forEach((img) => {
         const figure = document.createElement('figure');
         figure.className = 'img-card';
 
