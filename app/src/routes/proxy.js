@@ -29,9 +29,10 @@ const ALLOWED_DOMAINS = new Set([
   // Pexels
   'images.pexels.com',
 
-  // Pixabay
+  // Pixabay — webformatURL uses pixabay.com, large images use cdn.pixabay.com
   'cdn.pixabay.com',
   'i.pixabay.com',
+  'pixabay.com',
 
   // Flickr (served via Openverse and directly)
   'live.staticflickr.com',
