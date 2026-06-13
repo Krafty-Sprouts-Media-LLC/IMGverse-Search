@@ -35,9 +35,10 @@ The `/proxy` route sets `Content-Type: image/jpeg` with **no** `Content-Disposit
 
 ### Option A: Manual Compose Deploy
 
-1. Create a new **Compose** service in Dokploy
-2. Point to: `https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search`
-3. Set Compose Path: `./docker-compose.yml`
+1. In Dokploy → your Project → **Create Service** → **Docker Compose**
+   > ⚠️ **Critical:** Choose **Docker Compose**, NOT "Application". Choosing "Application" will trigger a Nixpacks build and fail because this is a multi-container compose stack.
+2. Select your GitHub account and the **IMGverse-Search** repository
+3. Branch: `master` · Build Path: `/` (repo root — leave as default)
 4. Go to **Environment** tab and add:
    ```env
    STACK_SLUG=imgverse
@@ -65,13 +66,19 @@ The `/proxy` route sets `Content-Type: image/jpeg` with **no** `Content-Disposit
 
 ### Configure Domains
 
-Go to the **Domains** tab and add:
+Go to the **Domains** tab and click **Add Domain**. Fill in the dialog as follows:
 
-| Service | Domain Example |
-|---------|---------------|
-| **nginx** | `images.yourdomain.com` |
+| Field | Value |
+|-------|-------|
+| **Service Name** | `nginx` |
+| **Host** | `images.yourdomain.com` (your actual domain) |
+| **Path** | `/` |
+| **Internal Path** | `/` |
+| **Container Port** | `80` |
 
-Traefik auto-provisions SSL. No SSH required.
+> **Important:** Service Name must be `nginx` — that is the only container on the public `dokploy-network`. The `app` and `redis` containers are internal only and should never be given a public domain.
+
+Traefik will auto-provision an SSL certificate. No SSH required.
 
 ---
 
