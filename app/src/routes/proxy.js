@@ -22,17 +22,59 @@ const router = Router();
 // Prevents the proxy from being used as an open relay.
 // ---------------------------------------------------------------------------
 const ALLOWED_DOMAINS = new Set([
+  // Unsplash
   'images.unsplash.com',
   'plus.unsplash.com',
+
+  // Pexels
   'images.pexels.com',
+
+  // Pixabay
   'cdn.pixabay.com',
-  'pixabay.com',
+  'i.pixabay.com',
+
+  // Flickr (served via Openverse and directly)
   'live.staticflickr.com',
+  'farm1.staticflickr.com',
+  'farm2.staticflickr.com',
+  'farm3.staticflickr.com',
+  'farm4.staticflickr.com',
+  'farm5.staticflickr.com',
+  'farm6.staticflickr.com',
+  'farm7.staticflickr.com',
+  'farm8.staticflickr.com',
+  'farm9.staticflickr.com',
+
+  // iNaturalist
   'inaturalist-open-data.s3.amazonaws.com',
   'static.inaturalist.org',
+  'inaturalist-open-data.s3.us-east-1.amazonaws.com',
+
+  // Openverse / WordPress media CDN
   'api.openverse.engineering',
   'openverse.org',
+  'i0.wp.com',
+  'i1.wp.com',
+  'i2.wp.com',
+  'i3.wp.com',
+  'wordpress.com',
+  'files.wordpress.com',
+
+  // Wikimedia / Wikipedia (large Openverse source)
   'upload.wikimedia.org',
+  'commons.wikimedia.org',
+
+  // Europeana (Openverse aggregates from here)
+  'europeana.eu',
+  'api.europeana.eu',
+
+  // Internet Archive (CC-licensed content)
+  'archive.org',
+  'ia800501.us.archive.org',
+
+  // Smithsonian Open Access
+  'ids.si.edu',
+  'iiif.si.edu',
 ]);
 
 const MAX_SIZE_BYTES = (parseInt(process.env.PROXY_MAX_SIZE_MB, 10) || 20) * 1024 * 1024;

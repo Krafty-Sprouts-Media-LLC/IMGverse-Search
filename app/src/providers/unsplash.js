@@ -44,8 +44,8 @@ export async function search(query, page = 1) {
       normalize({
         id:        item.id,
         provider:  'unsplash',
-        thumbUrl:  item.urls.small,
-        fullUrl:   item.urls.full,
+        thumbUrl:  item.urls.regular,   // 1080px — right-click Save As gives a full usable image
+        fullUrl:   item.urls.full,       // max resolution for the "Open full image" button
         width:     item.width,
         height:    item.height,
         alt:       item.alt_description || item.description || '',

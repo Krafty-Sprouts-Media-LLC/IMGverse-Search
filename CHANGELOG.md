@@ -5,6 +5,14 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 13/06/2026
+
+### Fixed
+- Proxy whitelist massively expanded: added all Flickr farm domains, iNaturalist S3 variants, WordPress/wp.com CDNs, Wikimedia Commons, Europeana, Internet Archive, Smithsonian — fixing blank results from Openverse
+- Pixabay: changed `thumbUrl` from `previewURL` (tiny) to `webformatURL` (640px) — fixing proxy domain mismatch and tiny saves
+- Unsplash: changed `thumbUrl` from `urls.small` (400px) to `urls.regular` (1080px) — right-click Save As now gives a full usable image
+- Pexels: changed `thumbUrl` from `src.medium` to `src.large` (940px) — right-click saves a bigger image
+
 ## [1.0.1] - 13/06/2026
 
 ### Fixed

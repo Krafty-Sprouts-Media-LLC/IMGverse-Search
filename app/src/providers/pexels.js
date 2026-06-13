@@ -40,8 +40,8 @@ export async function search(query, page = 1) {
       normalize({
         id:        item.id,
         provider:  'pexels',
-        thumbUrl:  item.src.medium,
-        fullUrl:   item.src.original,
+        thumbUrl:  item.src.large2x,      // 1880px — right-click Save As gives a usable image
+        fullUrl:   item.src.original,    // max resolution for "Open full image" button
         width:     item.width,
         height:    item.height,
         alt:       item.alt || '',
