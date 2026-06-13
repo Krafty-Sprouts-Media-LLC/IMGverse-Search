@@ -52,7 +52,9 @@ const ALLOWED_DOMAINS = new Set([
   'inaturalist-open-data.s3.us-east-1.amazonaws.com',
 
   // Openverse / WordPress media CDN
-  'api.openverse.engineering',
+  // Thumbnails served from api.openverse.org/v1/images/{id}/thumb/ (redirects to actual CDN)
+  'api.openverse.org',            // current domain (was api.openverse.engineering — now changed)
+  'api.openverse.engineering',    // legacy — keep for older cached URLs
   'openverse.org',
   'i0.wp.com',
   'i1.wp.com',

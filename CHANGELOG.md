@@ -5,6 +5,12 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 13/06/2026
+
+### Fixed
+- iNaturalist: changed `thumbUrl` from `medium` (500px) to `large` (1024px) — right-click Save As now gives a proper full-size image
+- Openverse: added `api.openverse.org` to proxy whitelist — Openverse migrated from `api.openverse.engineering` to `api.openverse.org`, breaking all thumbnail proxying (root cause of "no results")
+
 ## [1.0.3] - 13/06/2026
 
 ### Fixed

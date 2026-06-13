@@ -45,8 +45,8 @@ export async function search(query, page = 1) {
 
     for (const obs of data.results || []) {
       for (const photo of obs.photos || []) {
-        const thumbUrl = photo.url?.replace('square', 'medium') || photo.url;
-        const fullUrl  = photo.url?.replace('square', 'original') || photo.url;
+        const thumbUrl = photo.url?.replace('square', 'large') || photo.url;     // 1024px — right-click Save As gives a usable image
+        const fullUrl  = photo.url?.replace('square', 'original') || photo.url;  // original resolution for "Open full image" button
 
         if (!thumbUrl) continue;
 
