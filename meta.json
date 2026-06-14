@@ -2,8 +2,8 @@
   {
     "id": "imgverse-search",
     "name": "IMGverse Search",
-    "version": "1.0.18",
-    "description": "Self-hosted stock image aggregator. Merges Openverse, iNaturalist, Unsplash, Pexels, and Pixabay into one fast search UI with right-click native image saving.",
+    "version": "1.0.19",
+    "description": "Self-hosted stock image aggregator. Merges iNaturalist, Unsplash, Pexels, and Pixabay into one fast search UI with right-click native image saving.",
     "links": {
       "github": "https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search",
       "docs": "https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search#readme"

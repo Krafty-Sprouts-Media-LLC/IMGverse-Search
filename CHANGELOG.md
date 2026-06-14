@@ -5,6 +5,11 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.19] - 14/06/2026
+
+### Removed
+- **Wikimedia Commons** provider entirely: removed from the active provider aggregator so it no longer appears in search results, and removed the filter pill plus all frontend copy references from the UI
+
 ## [1.0.18] - 14/06/2026
 
 ### Added

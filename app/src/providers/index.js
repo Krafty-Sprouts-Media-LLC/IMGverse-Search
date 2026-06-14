@@ -8,7 +8,7 @@
 // Orientation support:
 //   - Providers with native support (Unsplash, Pexels, Pixabay) receive
 //     the param in their API request.
-//   - Providers without (Wikimedia, iNaturalist) are filtered client-side
+//   - Providers without (iNaturalist) are filtered client-side
 //     by aspect ratio after results are returned.
 //
 // @package IMGverse-Search
@@ -17,7 +17,6 @@
 
 'use strict';
 
-import { search as wikimedia   } from './wikimedia.js';
 import { search as inaturalist } from './inaturalist.js';
 import { search as unsplash    } from './unsplash.js';
 import { search as pexels      } from './pexels.js';
@@ -60,7 +59,6 @@ function filterByOrientation(results, orientation) {
  */
 export async function searchAll(query, page = 1, filter = [], orientation = '') {
   const all = [
-    { name: 'wikimedia',   fn: wikimedia   },
     { name: 'inaturalist', fn: inaturalist },
     { name: 'unsplash',    fn: unsplash    },
     { name: 'pexels',      fn: pexels      },
