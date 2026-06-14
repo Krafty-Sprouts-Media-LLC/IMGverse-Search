@@ -10,7 +10,8 @@ Current and candidate providers for IMGverse Search.
 | **Unsplash** | `UNSPLASH_KEY` | High-quality photos, 50 req/hr free |
 | **Pexels** | `PEXELS_KEY` | Large library, 200 req/hr free |
 | **Pixabay** | `PIXABAY_KEY` | 100 req/hr free |
-| **Wikimedia Commons** | None | CC/public domain, huge archive — **added v1.0.15** |
+| **Wikimedia Commons** | None | CC/public domain, huge archive |
+| **Flickr** | `FLICKR_KEY` | CC-licensed photos only |
 | **iNaturalist** | None | Nature & wildlife only |
 | **Openverse** | OAuth on VPS | CC content; **blocked on some hosts by Cloudflare** — see [OPENVERSE-OAUTH.md](OPENVERSE-OAUTH.md) |
 
