@@ -44,6 +44,7 @@ No format conversion. No proxy in the normal user flow. Images are exactly what 
    UNSPLASH_KEY=your_unsplash_key
    PEXELS_KEY=your_pexels_key
    PIXABAY_KEY=your_pixabay_key
+   FLICKR_KEY=your_flickr_key
    OPENVERSE_CLIENT_ID=your_openverse_client_id
    OPENVERSE_CLIENT_SECRET=your_openverse_client_secret
    ```
@@ -93,6 +94,7 @@ All variables are documented in [`.env.example`](.env.example).
 | `UNSPLASH_KEY` | No | — | Unsplash API key (free at unsplash.com/developers) |
 | `PEXELS_KEY` | No | — | Pexels API key (free at pexels.com/api) |
 | `PIXABAY_KEY` | No | — | Pixabay API key (free at pixabay.com/api) |
+| `FLICKR_KEY` | No | — | Flickr API key (free at flickr.com/services/apps/create) |
 | `OPENVERSE_CLIENT_ID` | No* | — | Openverse OAuth client ID — *required on many VPS/datacenter hosts |
 | `OPENVERSE_CLIENT_SECRET` | No* | — | Openverse OAuth client secret |
 | `PROXY_MAX_SIZE_MB` | No | `20` | Maximum proxied image size in MB |
@@ -112,6 +114,7 @@ See **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)** — register, verify 
 |----------|-------------|------------|-------|
 | Openverse | OAuth on VPS | Unlimited | Often **blocked entirely** by Cloudflare on VPS — use Wikimedia instead |
 | Wikimedia | No | Unlimited | CC/public domain; no key; best Openverse alternative on VPS |
+| Flickr | Yes (free) | Rate limited | CC-licensed photos only — key at flickr.com/services/apps/create |
 | iNaturalist | No | Unlimited | Nature & wildlife photography |
 | Pixabay | Yes (free) | 100 req/hr | Register at pixabay.com/api |
 | Unsplash | Yes (free) | 50 req/hr | Register at unsplash.com/developers |

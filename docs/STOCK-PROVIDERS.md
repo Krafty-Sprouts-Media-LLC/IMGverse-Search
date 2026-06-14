@@ -19,7 +19,6 @@ Current and candidate providers for IMGverse Search.
 | Provider | API key | Free tier | Fit |
 |----------|---------|-----------|-----|
 | **NASA Images** | None | Unlimited | Space, science, public domain |
-| **Flickr** | Yes (free) | Rate limited | Huge CC library (overlaps Openverse) |
 | **Smithsonian Open Access** | None | Unlimited | Museum / cultural images |
 | **Europeana** | Yes (free) | Rate limited | European cultural heritage |
 | **Freepik** | Yes | Limited free | More vectors/PSD than photos |

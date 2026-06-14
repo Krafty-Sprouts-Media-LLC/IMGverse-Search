@@ -17,6 +17,7 @@
 
 'use strict';
 
+import { search as flickr      } from './flickr.js';
 import { search as wikimedia   } from './wikimedia.js';
 import { search as openverse   } from './openverse.js';
 import { search as inaturalist } from './inaturalist.js';
@@ -74,6 +75,7 @@ export async function searchAll(query, page = 1, filter = [], orientation = '') 
   const all = [
     { name: 'openverse',   fn: openverse   },
     { name: 'wikimedia',   fn: wikimedia   },
+    { name: 'flickr',      fn: flickr      },
     { name: 'inaturalist', fn: inaturalist },
     { name: 'unsplash',    fn: unsplash    },
     { name: 'pexels',      fn: pexels      },

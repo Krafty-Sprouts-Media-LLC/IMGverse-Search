@@ -45,6 +45,7 @@ const ALLOWED_DOMAINS = new Set([
   'farm7.staticflickr.com',
   'farm8.staticflickr.com',
   'farm9.staticflickr.com',
+  'combo.staticflickr.com',
 
   // iNaturalist
   'inaturalist-open-data.s3.amazonaws.com',
