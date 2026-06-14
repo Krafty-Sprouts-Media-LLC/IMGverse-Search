@@ -20,7 +20,11 @@ Symptoms:
 - Empty results with no useful error (if your app swallows failures)
 - Works locally but fails after deploy
 
-Root cause: Openverse sits behind Cloudflare. Many datacenter IPs are blocked for unauthenticated traffic. Registering an OAuth app and sending a **Bearer token** identifies your project and bypasses the block.
+Root cause: Openverse sits behind Cloudflare. Many datacenter IPs are blocked for unauthenticated traffic. Registering an OAuth app and sending a **Bearer token** usually bypasses the block.
+
+### Total Cloudflare block (OAuth also fails)
+
+If logs show **"Just a moment..."** HTML on the **token** endpoint (`/v1/auth_tokens/token/`), Cloudflare is blocking **all** Openverse traffic from your server IP — OAuth cannot fix this. Use Wikimedia Commons or contact Openverse to whitelist your IP ([issue #5478](https://github.com/WordPress/openverse/issues/5478)).
 
 Official reference: [Authentication and Throttling](https://docs.openverse.org/api/reference/authentication_and_throttling.html)
 
@@ -308,6 +312,7 @@ OPENVERSE_CLIENT_SECRET=your_client_secret
 
 | Error | Likely cause | Fix |
 |-------|--------------|-----|
+| Token response is HTML **"Just a moment..."** | Cloudflare total block on your server IP | **No code fix** — use Wikimedia Commons; ask Openverse to whitelist IP |
 | `403` on `/v1/images/` without token | Datacenter IP blocked | Register OAuth and send Bearer token |
 | `403` with token | Email not verified | Click verification link in email |
 | `401` on `/v1/auth_tokens/token/` | Wrong `client_id` or `client_secret` | Re-copy from registration response |

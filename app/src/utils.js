@@ -87,6 +87,40 @@ export function interleave(groups) {
 }
 
 /**
+ * Stable dedupe key for the same image across providers or pages.
+ * Uses hostname + pathname so query params (fm=jpg etc.) do not matter.
+ *
+ * @param {object} image - Canonical ImageResult.
+ * @returns {string}
+ */
+export function dedupeKey(image) {
+  const raw = image.full || image.thumb || '';
+  try {
+    const parsed = new URL(raw);
+    return `${parsed.hostname}${parsed.pathname}`.toLowerCase();
+  } catch {
+    return image.id || '';
+  }
+}
+
+/**
+ * Remove duplicate images (same CDN file or same id).
+ *
+ * @param {object[]} results - Interleaved search results.
+ * @returns {object[]}
+ */
+export function dedupeResults(results) {
+  const seen = new Set();
+  return results.filter((img) => {
+    const key = dedupeKey(img);
+    if (!key || seen.has(key) || seen.has(img.id)) return false;
+    seen.add(key);
+    seen.add(img.id);
+    return true;
+  });
+}
+
+/**
  * Normalize a raw provider result into the canonical ImageResult shape.
  * Every provider adapter MUST call this before returning results.
  *

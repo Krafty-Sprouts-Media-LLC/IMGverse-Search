@@ -5,6 +5,17 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.15] - 14/06/2026
+
+### Added
+- **Wikimedia Commons** provider — free, no API key, CC/public domain (Openverse alternative when Cloudflare blocks your host)
+- `docs/STOCK-PROVIDERS.md` — active providers and candidates (NASA, Flickr, Smithsonian, etc.)
+
+### Fixed
+- Duplicate images: server-side URL dedupe after interleave + client dedupe by CDN pathname (same photo from multiple providers)
+- Infinite scroll: page fetch lock + search token prevents duplicate/stale page appends
+- Openverse: detect Cloudflare **total block** on OAuth token endpoint; skip further requests and log clear message (not a credentials issue)
+
 ## [1.0.14] - 13/06/2026
 
 ### Fixed

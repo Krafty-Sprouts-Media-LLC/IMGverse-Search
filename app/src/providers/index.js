@@ -17,12 +17,13 @@
 
 'use strict';
 
+import { search as wikimedia   } from './wikimedia.js';
 import { search as openverse   } from './openverse.js';
 import { search as inaturalist } from './inaturalist.js';
 import { search as unsplash    } from './unsplash.js';
 import { search as pexels      } from './pexels.js';
 import { search as pixabay     } from './pixabay.js';
-import { interleave } from '../utils.js';
+import { interleave, dedupeResults } from '../utils.js';
 
 // Providers that accept an orientation param natively in their API
 const NATIVE_ORIENTATION = new Set(['unsplash', 'pexels', 'pixabay']);
@@ -72,6 +73,7 @@ function filterByOrientation(results, orientation) {
 export async function searchAll(query, page = 1, filter = [], orientation = '') {
   const all = [
     { name: 'openverse',   fn: openverse   },
+    { name: 'wikimedia',   fn: wikimedia   },
     { name: 'inaturalist', fn: inaturalist },
     { name: 'unsplash',    fn: unsplash    },
     { name: 'pexels',      fn: pexels      },
@@ -123,5 +125,5 @@ export async function searchAll(query, page = 1, filter = [], orientation = '') 
   // Round-robin interleave — provider 1 top result, provider 2 top result, …
   // then provider 1 second result, provider 2 second result, …
   // This keeps each provider's relevance ranking intact while mixing sources.
-  return interleave(filtered);
+  return dedupeResults(interleave(filtered));
 }

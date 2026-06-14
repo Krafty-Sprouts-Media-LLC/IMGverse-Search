@@ -13,7 +13,7 @@
 
 import fetch from 'node-fetch';
 import { normalize } from '../utils.js';
-import { getOpenverseToken } from './openverse-auth.js';
+import { getOpenverseToken, isOpenverseBlocked } from './openverse-auth.js';
 
 const BASE = 'https://api.openverse.org/v1/images/';
 const UA   = 'IMGverse-Search/1.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
@@ -56,6 +56,9 @@ function logAccessDenied(status) {
   }
 
   if (status === 403 && hasCreds) {
+    if (isOpenverseBlocked()) {
+      return; // full block already logged by openverse-auth.js
+    }
     console.error(
       '[IMGverse/openverse] HTTP 403 with OAuth credentials — verify the app email at '
       + 'https://api.openverse.org/v1/auth_tokens/register/ and confirm the client ID/secret.'
@@ -74,6 +77,10 @@ function logAccessDenied(status) {
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
 export async function search(query, page = 1) {
+  if (isOpenverseBlocked()) {
+    return [];
+  }
+
   try {
     const params = new URLSearchParams({ q: query, page, page_size: 20 });
     const res = await fetch(`${BASE}?${params}`, {

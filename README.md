@@ -110,7 +110,8 @@ See **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)** — register, verify 
 
 | Provider | Key Required | Free Limit | Notes |
 |----------|-------------|------------|-------|
-| Openverse | OAuth recommended | Unlimited | CC-licensed; OAuth required on many VPS/datacenter IPs (HTTP 403 otherwise) |
+| Openverse | OAuth on VPS | Unlimited | Often **blocked entirely** by Cloudflare on VPS — use Wikimedia instead |
+| Wikimedia | No | Unlimited | CC/public domain; no key; best Openverse alternative on VPS |
 | iNaturalist | No | Unlimited | Nature & wildlife photography |
 | Pixabay | Yes (free) | 100 req/hr | Register at pixabay.com/api |
 | Unsplash | Yes (free) | 50 req/hr | Register at unsplash.com/developers |

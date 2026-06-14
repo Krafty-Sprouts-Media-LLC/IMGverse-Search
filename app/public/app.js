@@ -30,8 +30,11 @@ let currentPage        = 1;
 let currentProvider    = '';
 let currentOrientation = '';
 let isLoading          = false;
+let inflightPage       = null;
 let hasMore            = true;
 let seenIds            = new Set();
+let seenUrls           = new Set();
+let searchToken        = 0;
 
 // ---------------------------------------------------------------------------
 // Search form submit
@@ -71,10 +74,13 @@ orientPills.forEach((pill) => {
 // Start a fresh search (reset grid)
 // ---------------------------------------------------------------------------
 function startNewSearch(q) {
+    searchToken++;
     currentQuery = q;
     currentPage  = 1;
     hasMore      = true;
+    inflightPage = null;
     seenIds      = new Set();
+    seenUrls     = new Set();
     grid.innerHTML = '';
     emptyState.classList.add('hidden');
     fetchPage();
@@ -84,13 +90,16 @@ function startNewSearch(q) {
 // Fetch one page of results from the backend
 // ---------------------------------------------------------------------------
 async function fetchPage() {
-    if (isLoading || !hasMore) return;
+    if (isLoading || !hasMore || inflightPage !== null) return;
 
-    isLoading = true;
+    const pageToFetch = currentPage;
+    const token       = searchToken;
+    inflightPage = pageToFetch;
+    isLoading    = true;
     loader.classList.remove('hidden');
 
     try {
-        const params = new URLSearchParams({ q: currentQuery, page: currentPage });
+        const params = new URLSearchParams({ q: currentQuery, page: pageToFetch });
         if (currentProvider)    params.set('providers',    currentProvider);
         if (currentOrientation) params.set('orientation',  currentOrientation);
 
@@ -99,19 +108,22 @@ async function fetchPage() {
 
         if (!res.ok) throw new Error(data.error || 'Search failed');
 
+        if (token !== searchToken) return;
+
         if (data.results.length === 0) {
             hasMore = false;
-            if (currentPage === 1) showEmptyState();
+            if (pageToFetch === 1) showEmptyState();
         } else {
             renderCards(data.results);
-            currentPage++;
+            currentPage = pageToFetch + 1;
             if (data.results.length < 10) hasMore = false;
         }
     } catch (err) {
         console.error('[IMGverse]', err.message);
-        if (currentPage === 1) showEmptyState();
+        if (pageToFetch === 1) showEmptyState();
     } finally {
-        isLoading = false;
+        inflightPage = null;
+        isLoading    = false;
         loader.classList.add('hidden');
     }
 }
@@ -119,10 +131,24 @@ async function fetchPage() {
 // ---------------------------------------------------------------------------
 // Render image cards into the masonry grid
 // ---------------------------------------------------------------------------
+function imageKey(img) {
+    const raw = img.full || img.thumb || '';
+    try {
+        const u = new URL(raw);
+        return `${u.hostname}${u.pathname}`.toLowerCase();
+    } catch {
+        return img.id;
+    }
+}
+
 function renderCards(results) {
     const fresh = results.filter((img) => {
-        if (seenIds.has(img.id)) return false;
+        const urlKey = imageKey(img);
+        if (seenIds.has(img.id) || (urlKey && seenUrls.has(urlKey))) {
+            return false;
+        }
         seenIds.add(img.id);
+        if (urlKey) seenUrls.add(urlKey);
         return true;
     });
 
@@ -170,7 +196,7 @@ function renderCards(results) {
 // Infinite scroll via IntersectionObserver
 // ---------------------------------------------------------------------------
 const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting && currentQuery && hasMore && !isLoading) {
+    if (entries[0].isIntersecting && currentQuery && hasMore && !isLoading && inflightPage === null) {
         fetchPage();
     }
 }, { rootMargin: '400px' });
