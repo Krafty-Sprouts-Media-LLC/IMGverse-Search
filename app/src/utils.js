@@ -11,6 +11,33 @@
 'use strict';
 
 /**
+ * Pexels/Unsplash CDNs use content negotiation: modern browsers send
+ * Accept: image/avif and get AVIF back even when the URL ends in .jpeg.
+ * Windows then shows AVIF on Save As. Provider-supported fix: fm=jpg param.
+ *
+ * @param {string} url - Provider CDN URL.
+ * @returns {string}   - URL with JPEG format param where applicable.
+ */
+export function ensureJpegUrl(url) {
+  if (!url) return url;
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+
+    if (host.includes('pexels.com') || host.includes('unsplash.com')) {
+      if (!parsed.searchParams.has('fm')) {
+        parsed.searchParams.set('fm', 'jpg');
+      }
+    }
+
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Build a proxied URL pointing to our /proxy endpoint.
  * Used for the "Open full image" flow only — grid thumbnails load direct CDN URLs.
  *
@@ -67,8 +94,8 @@ export function interleave(groups) {
  * {
  *   id:         string  — "<provider>-<originalId>"
  *   provider:   string  — lowercase provider name
- *   thumb:      string  — direct CDN URL (native provider format)
- *   full:       string  — direct CDN full-res URL (native provider format)
+ *   thumb:      string  — direct CDN URL (JPEG on Pexels/Unsplash via fm=jpg)
+ *   full:       string  — direct CDN full-res URL (JPEG on Pexels/Unsplash via fm=jpg)
  *   width:      number
  *   height:     number
  *   alt:        string  — accessible description
@@ -97,8 +124,8 @@ export function normalize({
   return {
     id:        `${provider}-${id}`,
     provider,
-    thumb:     thumbUrl,
-    full:      fullUrl,
+    thumb:     ensureJpegUrl(thumbUrl),
+    full:      ensureJpegUrl(fullUrl),
     width,
     height,
     alt,

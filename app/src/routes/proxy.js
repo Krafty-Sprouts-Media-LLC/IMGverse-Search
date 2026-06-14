@@ -126,12 +126,18 @@ const UA = 'IMGverse-Search/1.0 (image proxy; +https://github.com/Krafty-Sprouts
  * @param {URL} parsed - Parsed upstream image URL.
  * @returns {Record<string, string>}
  */
-function upstreamHeaders(parsed) {
+function upstreamHeaders(parsed, format = 'jpeg') {
   const headers = {
     'User-Agent':      UA,
-    'Accept':          'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
   };
+
+  // Request JPEG from Pexels/Unsplash when converting to jpeg — avoids AVIF upstream
+  if (format === 'jpeg') {
+    headers.Accept = 'image/jpeg';
+  } else {
+    headers.Accept = 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8';
+  }
 
   if (parsed.hostname.includes('unsplash')) {
     headers.Referer = 'https://unsplash.com/';
@@ -151,13 +157,13 @@ function upstreamHeaders(parsed) {
  * @param {number} tries  - Maximum attempts.
  * @returns {Promise<import('node-fetch').Response>}
  */
-async function fetchUpstream(parsed, tries = 2) {
+async function fetchUpstream(parsed, tries = 2, format = 'jpeg') {
   let lastErr;
 
   for (let attempt = 1; attempt <= tries; attempt++) {
     try {
       return await fetch(parsed.toString(), {
-        headers:  upstreamHeaders(parsed),
+        headers:  upstreamHeaders(parsed, format),
         redirect: 'follow',
         signal:   AbortSignal.timeout(15_000),
       });
@@ -213,7 +219,7 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const upstream = await fetchUpstream(parsed);
+    const upstream = await fetchUpstream(parsed, 2, format);
 
     if (!upstream.ok) {
       console.error(`[IMGverse/proxy] Upstream HTTP ${upstream.status} for ${parsed.hostname}`);
