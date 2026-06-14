@@ -419,3 +419,57 @@ body {
 }
 
 .hidden { display: none !important; }
+
+/* ---------------------------------------------------------------------------
+ * Pagination
+ * --------------------------------------------------------------------------- */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 2rem 0 1rem;
+    flex-wrap: wrap;
+}
+
+.page-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    min-width: 8rem;
+}
+
+#page-label {
+    font-weight: 700;
+    color: var(--text-strong);
+    font-size: 0.95rem;
+}
+
+.page-count {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.page-btn {
+    padding: 0.55rem 1.25rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-base);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.page-btn:hover:not(:disabled) {
+    border-color: var(--brand);
+    color: var(--brand);
+}
+
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

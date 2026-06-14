@@ -5,6 +5,18 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.18] - 14/06/2026
+
+### Added
+- **Pagination** replaces infinite scroll — Previous/Next pages, ~20 results per provider per page, grid replaces on each page (no duplicate append)
+
+### Changed
+- Removed **Openverse** and **Flickr** from active providers and filter bar (Openverse blocked on VPS; Flickr requires Pro)
+- Wikimedia: grid thumbs use 320px; full image URL always resolves to original upload file (never 960px thumb)
+
+### Removed
+- Infinite scroll sentinel and client-side scroll dedupe state
+
 ## [1.0.17] - 14/06/2026
 
 ### Fixed

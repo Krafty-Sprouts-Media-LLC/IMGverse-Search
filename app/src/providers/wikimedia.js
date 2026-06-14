@@ -17,7 +17,24 @@ const API = 'https://commons.wikimedia.org/w/api.php';
 const UA  = 'IMGverse-Search/1.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
 
 /**
- * Resolve the original full-resolution Commons file URL (never a /thumb/ scaled URL).
+ * Strip a Commons /thumb/ scaled URL back to the original upload URL.
+ *
+ * @param {string} thumbUrl - e.g. .../thumb/a/ab/File.jpg/960px-File.jpg
+ * @returns {string|null}
+ */
+function originalFromThumbUrl(thumbUrl) {
+  if (!thumbUrl || !thumbUrl.includes('/thumb/')) return null;
+
+  const match = thumbUrl.match(
+    /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/)thumb\/(.+\/)([^/]+)\/\d+px-[^/]+$/
+  );
+  if (!match) return null;
+
+  return `${match[1]}${match[2]}${match[3]}`;
+}
+
+/**
+ * Resolve the original full-resolution Commons file URL (never a scaled /thumb/ URL).
  *
  * @param {object} info  - imageinfo[0] from the API.
  * @param {string} title - Page title e.g. "File:Example.jpg".
@@ -29,14 +46,8 @@ function originalCommonsUrl(info, title) {
     return direct;
   }
 
-  if (info.thumburl) {
-    const match = info.thumburl.match(
-      /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/)thumb\/([0-9a-f]\/[0-9a-f]{2}\/)([^/]+)\/\d+px-[^/]+$/
-    );
-    if (match) {
-      return `${match[1]}${match[2]}${match[3]}`;
-    }
-  }
+  const fromThumb = originalFromThumbUrl(info.thumburl);
+  if (fromThumb) return fromThumb;
 
   const fileName = (title || '').replace(/^File:/, '').trim().replace(/ /g, '_');
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
@@ -63,7 +74,7 @@ export async function search(query, page = 1) {
       gsroffset:    String((page - 1) * perPage),
       prop:         'imageinfo',
       iiprop:       'url|size|thumburl|extmetadata|mime',
-      iiurlwidth:   '640',
+      iiurlwidth:   '320',
     });
 
     const res = await fetch(`${API}?${params}`, {
@@ -87,8 +98,8 @@ export async function search(query, page = 1) {
         const mime = info.mime || '';
         if (!mime.startsWith('image/') || mime === 'image/svg+xml') return null;
 
-        const meta   = info.extmetadata || {};
-        const artist = meta.Artist?.value?.replace(/<[^>]+>/g, '').trim() || '';
+        const meta    = info.extmetadata || {};
+        const artist  = meta.Artist?.value?.replace(/<[^>]+>/g, '').trim() || '';
         const license = meta.LicenseShortName?.value || 'See Wikimedia Commons';
 
         const fullUrl  = originalCommonsUrl(info, item.title);

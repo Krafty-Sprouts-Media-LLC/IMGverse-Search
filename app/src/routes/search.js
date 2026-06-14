@@ -53,7 +53,13 @@ router.get('/', async (req, res) => {
   // Cache miss — fan out to all providers
   const results = await searchAll(q, page, providers, orientation);
 
-  const payload = { total: results.length, page, orientation, results };
+  const payload = {
+    total:   results.length,
+    page,
+    orientation,
+    results,
+    hasNext: results.length >= 10,
+  };
 
   // Cache successful searches only — empty results are often transient (timeout,
   // upstream outage) and must not be pinned in Redis for an hour.

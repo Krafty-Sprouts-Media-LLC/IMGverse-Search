@@ -1,8 +1,7 @@
 /* =============================================================================
  * app.js
  * IMGverse Search — Vanilla JS frontend.
- * Handles: search form, provider filter chips, orientation filter chips,
- * masonry grid rendering, direct provider CDN links, infinite scroll.
+ * Search, provider/orientation filters, paginated masonry grid.
  *
  * @package IMGverse-Search
  * @since   1.0.0
@@ -10,35 +9,27 @@
 
 'use strict';
 
-// ---------------------------------------------------------------------------
-// DOM references
-// ---------------------------------------------------------------------------
 const searchForm    = document.getElementById('search-form');
 const searchInput   = document.getElementById('search-input');
 const grid          = document.getElementById('grid');
 const loader        = document.getElementById('loader');
 const emptyState    = document.getElementById('empty-state');
-const sentinel      = document.getElementById('sentinel');
+const pagination    = document.getElementById('pagination');
+const pagePrev      = document.getElementById('page-prev');
+const pageNext      = document.getElementById('page-next');
+const pageLabel     = document.getElementById('page-label');
+const pageCount     = document.getElementById('page-count');
 const filterPills   = document.querySelectorAll('.filter-pill');
 const orientPills   = document.querySelectorAll('.orient-pill');
 
-// ---------------------------------------------------------------------------
-// State
-// ---------------------------------------------------------------------------
 let currentQuery       = '';
 let currentPage        = 1;
 let currentProvider    = '';
 let currentOrientation = '';
+let hasNextPage        = false;
 let isLoading          = false;
-let inflightPage       = null;
-let hasMore            = true;
-let seenIds            = new Set();
-let seenUrls           = new Set();
 let searchToken        = 0;
 
-// ---------------------------------------------------------------------------
-// Search form submit
-// ---------------------------------------------------------------------------
 searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const q = searchInput.value.trim();
@@ -46,9 +37,6 @@ searchForm.addEventListener('submit', (e) => {
     startNewSearch(q);
 });
 
-// ---------------------------------------------------------------------------
-// Provider filter pills
-// ---------------------------------------------------------------------------
 filterPills.forEach((pill) => {
     pill.addEventListener('click', () => {
         filterPills.forEach((p) => p.classList.remove('active'));
@@ -58,9 +46,6 @@ filterPills.forEach((pill) => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Orientation filter pills
-// ---------------------------------------------------------------------------
 orientPills.forEach((pill) => {
     pill.addEventListener('click', () => {
         orientPills.forEach((p) => p.classList.remove('active'));
@@ -70,89 +55,87 @@ orientPills.forEach((pill) => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Start a fresh search (reset grid)
-// ---------------------------------------------------------------------------
+pagePrev.addEventListener('click', () => {
+    if (currentPage <= 1 || isLoading) return;
+    goToPage(currentPage - 1);
+});
+
+pageNext.addEventListener('click', () => {
+    if (!hasNextPage || isLoading) return;
+    goToPage(currentPage + 1);
+});
+
 function startNewSearch(q) {
     searchToken++;
     currentQuery = q;
     currentPage  = 1;
-    hasMore      = true;
-    inflightPage = null;
-    seenIds      = new Set();
-    seenUrls     = new Set();
+    goToPage(1);
+}
+
+function goToPage(page) {
+    currentPage = page;
     grid.innerHTML = '';
     emptyState.classList.add('hidden');
+    pagination.classList.add('hidden');
     fetchPage();
 }
 
-// ---------------------------------------------------------------------------
-// Fetch one page of results from the backend
-// ---------------------------------------------------------------------------
 async function fetchPage() {
-    if (isLoading || !hasMore || inflightPage !== null) return;
+    if (isLoading || !currentQuery) return;
 
-    const pageToFetch = currentPage;
-    const token       = searchToken;
-    inflightPage = pageToFetch;
-    isLoading    = true;
+    const token = searchToken;
+    isLoading   = true;
     loader.classList.remove('hidden');
 
     try {
-        const params = new URLSearchParams({ q: currentQuery, page: pageToFetch });
-        if (currentProvider)    params.set('providers',    currentProvider);
-        if (currentOrientation) params.set('orientation',  currentOrientation);
+        const params = new URLSearchParams({
+            q:    currentQuery,
+            page: String(currentPage),
+        });
+        if (currentProvider)    params.set('providers',   currentProvider);
+        if (currentOrientation) params.set('orientation', currentOrientation);
 
         const res  = await fetch(`/api/search?${params}`);
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.error || 'Search failed');
-
         if (token !== searchToken) return;
 
+        hasNextPage = Boolean(data.hasNext);
+
         if (data.results.length === 0) {
-            hasMore = false;
-            if (pageToFetch === 1) showEmptyState();
+            if (currentPage === 1) {
+                showEmptyState();
+            } else {
+                hasNextPage = false;
+                updatePagination();
+            }
         } else {
             renderCards(data.results);
-            currentPage = pageToFetch + 1;
-            if (data.results.length < 10) hasMore = false;
+            updatePagination(data.total);
+            pagination.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     } catch (err) {
         console.error('[IMGverse]', err.message);
-        if (pageToFetch === 1) showEmptyState();
+        if (currentPage === 1) showEmptyState();
     } finally {
-        inflightPage = null;
-        isLoading    = false;
+        isLoading = false;
         loader.classList.add('hidden');
     }
 }
 
-// ---------------------------------------------------------------------------
-// Render image cards into the masonry grid
-// ---------------------------------------------------------------------------
-function imageKey(img) {
-    const raw = img.full || img.thumb || '';
-    try {
-        const u = new URL(raw);
-        return `${u.hostname}${u.pathname}`.toLowerCase();
-    } catch {
-        return img.id;
-    }
+function updatePagination(totalOnPage) {
+    pageLabel.textContent = `Page ${currentPage}`;
+    pageCount.textContent = totalOnPage != null
+        ? `${totalOnPage} image${totalOnPage === 1 ? '' : 's'} on this page`
+        : '';
+    pagePrev.disabled = currentPage <= 1;
+    pageNext.disabled = !hasNextPage;
 }
 
 function renderCards(results) {
-    const fresh = results.filter((img) => {
-        const urlKey = imageKey(img);
-        if (seenIds.has(img.id) || (urlKey && seenUrls.has(urlKey))) {
-            return false;
-        }
-        seenIds.add(img.id);
-        if (urlKey) seenUrls.add(urlKey);
-        return true;
-    });
-
-    fresh.forEach((img) => {
+    results.forEach((img) => {
         const figure = document.createElement('figure');
         figure.className = 'img-card';
 
@@ -192,22 +175,9 @@ function renderCards(results) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// Infinite scroll via IntersectionObserver
-// ---------------------------------------------------------------------------
-const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting && currentQuery && hasMore && !isLoading && inflightPage === null) {
-        fetchPage();
-    }
-}, { rootMargin: '400px' });
-
-observer.observe(sentinel);
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function showEmptyState() {
     emptyState.classList.remove('hidden');
+    pagination.classList.add('hidden');
     emptyState.querySelector('h2').textContent = `No results for "${currentQuery}"`;
     emptyState.querySelector('p').textContent  = 'Try a different keyword or check that at least one provider is configured.';
 }
