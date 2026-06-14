@@ -17,6 +17,32 @@ const API = 'https://commons.wikimedia.org/w/api.php';
 const UA  = 'IMGverse-Search/1.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
 
 /**
+ * Resolve the original full-resolution Commons file URL (never a /thumb/ scaled URL).
+ *
+ * @param {object} info  - imageinfo[0] from the API.
+ * @param {string} title - Page title e.g. "File:Example.jpg".
+ * @returns {string}
+ */
+function originalCommonsUrl(info, title) {
+  const direct = info.url || '';
+  if (direct.includes('upload.wikimedia.org') && !direct.includes('/thumb/')) {
+    return direct;
+  }
+
+  if (info.thumburl) {
+    const match = info.thumburl.match(
+      /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/)thumb\/([0-9a-f]\/[0-9a-f]{2}\/)([^/]+)\/\d+px-[^/]+$/
+    );
+    if (match) {
+      return `${match[1]}${match[2]}${match[3]}`;
+    }
+  }
+
+  const fileName = (title || '').replace(/^File:/, '').trim().replace(/ /g, '_');
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
+}
+
+/**
  * Search Wikimedia Commons for images matching the given query.
  *
  * @param {string} query - Search term.
@@ -36,7 +62,7 @@ export async function search(query, page = 1) {
       gsrlimit:     String(perPage),
       gsroffset:    String((page - 1) * perPage),
       prop:         'imageinfo',
-      iiprop:       'url|size|extmetadata|mime',
+      iiprop:       'url|size|thumburl|extmetadata|mime',
       iiurlwidth:   '640',
     });
 
@@ -65,13 +91,16 @@ export async function search(query, page = 1) {
         const artist = meta.Artist?.value?.replace(/<[^>]+>/g, '').trim() || '';
         const license = meta.LicenseShortName?.value || 'See Wikimedia Commons';
 
+        const fullUrl  = originalCommonsUrl(info, item.title);
+        const thumbUrl = info.thumburl || fullUrl;
+
         return normalize({
           id:        String(item.pageid),
           provider:  'wikimedia',
-          thumbUrl:  info.thumburl || info.url,
-          fullUrl:   info.url,
-          width:     info.width || info.thumbwidth || 0,
-          height:    info.height || info.thumbheight || 0,
+          thumbUrl,
+          fullUrl,
+          width:     info.width || 0,
+          height:    info.height || 0,
           alt:       item.title?.replace(/^File:/, '') || '',
           credit:    artist,
           creditUrl: info.descriptionurl || '',
