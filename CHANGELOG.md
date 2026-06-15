@@ -5,6 +5,11 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.21] - 14/06/2026
+
+### Fixed
+- iNaturalist provider now caps results at 20 images per page. Previously each observation could contain multiple photos, causing the provider to return 60–100+ images and blowing past the intended 4-providers × 20 = ~80 results-per-page limit.
+
 ## [1.0.20] - 14/06/2026
 
 ### Added

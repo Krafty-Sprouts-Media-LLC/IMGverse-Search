@@ -68,7 +68,10 @@ export async function search(query, page = 1) {
       }
     }
 
-    return results;
+    // iNaturalist returns up to `per_page` observations, but each observation can
+    // contain many photos. Cap the provider at 20 image results per page so the
+    // overall "20 per provider" limit is honoured.
+    return results.slice(0, 20);
   } catch {
     return [];
   }
