@@ -273,6 +273,26 @@ body {
     transform: scale(1.03);
 }
 
+.img-card--saved {
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.45), var(--shadow-sm);
+}
+
+.saved-pin {
+    position: absolute;
+    top: 0.65rem;
+    left: 0.65rem;
+    z-index: 2;
+    background: rgba(22, 163, 74, 0.95);
+    color: #fff;
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    pointer-events: none;
+}
+
 /* Card hover overlay */
 .card-overlay {
     position: absolute;
@@ -354,6 +374,16 @@ body {
 .btn-open:hover {
     background: #fff;
     color: var(--brand);
+}
+
+.btn-open--saved {
+    background: rgba(220, 252, 231, 0.95);
+    color: #166534;
+}
+
+.btn-open--saved:hover {
+    background: #fff;
+    color: #166534;
 }
 
 /* ---------------------------------------------------------------------------

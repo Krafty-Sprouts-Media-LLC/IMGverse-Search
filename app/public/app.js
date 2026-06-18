@@ -30,6 +30,73 @@ let hasNextPage        = false;
 let isLoading          = false;
 let searchToken        = 0;
 
+const SAVED_STORAGE_KEY = 'imgverse:saved';
+
+/** @returns {Set<string>} */
+function loadSavedKeys() {
+    try {
+        const raw = sessionStorage.getItem(SAVED_STORAGE_KEY);
+        return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+        return new Set();
+    }
+}
+
+/** @param {Set<string>} keys */
+function persistSavedKeys(keys) {
+    sessionStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify([...keys]));
+}
+
+/** Stable key for the same image across pages (matches server dedupe logic). */
+function savedKey(img) {
+    const raw = img.full || img.thumb || '';
+    try {
+        const parsed = new URL(raw);
+        return `${parsed.hostname}${parsed.pathname}`.toLowerCase();
+    } catch {
+        return img.id || '';
+    }
+}
+
+function isImageSaved(img) {
+    const keys = loadSavedKeys();
+    const key  = savedKey(img);
+    return Boolean(key && (keys.has(key) || keys.has(img.id)));
+}
+
+function markImageSaved(img) {
+    const key = savedKey(img);
+    if (!key) return;
+
+    const keys = loadSavedKeys();
+    keys.add(key);
+    if (img.id) keys.add(img.id);
+    persistSavedKeys(keys);
+}
+
+function applySavedState(figure, img) {
+    figure.classList.add('img-card--saved');
+    figure.setAttribute('aria-label', `${img.alt || 'Image'} — saved this session`);
+
+    let pin = figure.querySelector('.saved-pin');
+    if (!pin) {
+        pin = document.createElement('span');
+        pin.className = 'saved-pin';
+        pin.textContent = 'Saved';
+        figure.insertBefore(pin, figure.firstChild);
+    }
+
+    const btn = figure.querySelector('.btn-open');
+    if (btn) {
+        btn.classList.add('btn-open--saved');
+        btn.title = 'Already opened this session — click to open again';
+        const svg = btn.querySelector('svg');
+        btn.textContent = '';
+        if (svg) btn.appendChild(svg);
+        btn.append(' Saved');
+    }
+}
+
 searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const q = searchInput.value.trim();
@@ -138,12 +205,14 @@ function renderCards(results) {
     results.forEach((img) => {
         const figure = document.createElement('figure');
         figure.className = 'img-card';
+        const saved = isImageSaved(img);
 
         const aspectStyle = img.width && img.height
             ? `aspect-ratio: ${img.width} / ${img.height};`
             : '';
 
         figure.innerHTML = `
+            ${saved ? '<span class="saved-pin">Saved</span>' : ''}
             <img
                 src="${escHtml(img.thumb)}"
                 alt="${escHtml(img.alt || '')}"
@@ -158,18 +227,34 @@ function renderCards(results) {
                 <div class="card-bottom">
                     ${img.credit ? `<p class="card-credit">📷 <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a></p>` : ''}
                     <a
-                        class="btn-open"
+                        class="btn-open${saved ? ' btn-open--saved' : ''}"
                         href="${escHtml(img.full)}"
                         target="_blank"
                         rel="noopener"
-                        title="Open full-resolution image from the provider — right-click to Save As"
+                        title="${saved ? 'Already opened this session — click to open again' : 'Open full-resolution image from the provider — right-click to Save As'}"
                     >
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                        Open full image
+                        ${saved ? 'Saved' : 'Open full image'}
                     </a>
                 </div>
             </div>
         `;
+
+        if (saved) {
+            figure.classList.add('img-card--saved');
+            figure.setAttribute('aria-label', `${img.alt || 'Image'} — saved this session`);
+        }
+
+        const openBtn = figure.querySelector('.btn-open');
+        openBtn.addEventListener('click', () => {
+            markImageSaved(img);
+            applySavedState(figure, img);
+        });
+
+        figure.querySelector('img').addEventListener('contextmenu', () => {
+            markImageSaved(img);
+            applySavedState(figure, img);
+        });
 
         grid.appendChild(figure);
     });

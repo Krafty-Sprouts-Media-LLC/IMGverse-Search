@@ -5,6 +5,11 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.22] - 14/06/2026
+
+### Added
+- **Saved this session** indicator on images you open or right-click to save — persisted in `sessionStorage` across pagination and new searches until you close the tab
+
 ## [1.0.21] - 14/06/2026
 
 ### Fixed
