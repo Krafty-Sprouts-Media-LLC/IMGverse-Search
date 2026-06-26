@@ -5,6 +5,12 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.29] - 26/06/2026
+
+### Added
+- Batch download **size selector**: **Web** (default — server resizes to max 1920px wide, JPEG quality 82) vs **Full resolution** (provider original dimensions)
+- Env vars `DOWNLOAD_MAX_WIDTH` (default `1920`) and `DOWNLOAD_JPEG_QUALITY` (default `82`) for `/download` when `size=web`
+
 ## [1.0.28] - 26/06/2026
 
 ### Fixed

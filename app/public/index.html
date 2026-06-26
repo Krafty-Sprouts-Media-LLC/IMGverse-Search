@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css?v=1.0.28">
+    <link rel="stylesheet" href="/style.css?v=1.0.29">
 </head>
 <body>
 
@@ -73,6 +73,17 @@
                 <span id="batch-filename-count">0 filenames</span>
                 <span id="batch-selection-count">0 images selected</span>
             </div>
+            <fieldset class="batch-panel__size">
+                <legend class="batch-panel__size-label">Download size</legend>
+                <label class="batch-panel__size-option">
+                    <input type="radio" name="batch-size" value="web" checked>
+                    Web (max 1920px, smaller files)
+                </label>
+                <label class="batch-panel__size-option">
+                    <input type="radio" name="batch-size" value="full">
+                    Full resolution (provider original)
+                </label>
+            </fieldset>
             <label class="batch-panel__mode">
                 <input type="checkbox" id="batch-mode">
                 Batch mode — click images to assign in order
@@ -110,6 +121,6 @@
         </nav>
     </main>
 
-    <script src="/app.js?v=1.0.28"></script>
+    <script src="/app.js?v=1.0.29"></script>
 </body>
 </html>

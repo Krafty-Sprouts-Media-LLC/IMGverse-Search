@@ -56,6 +56,35 @@ export const ALLOWED_DOMAINS = new Set([
 export const MAX_SIZE_BYTES = (parseInt(process.env.PROXY_MAX_SIZE_MB, 10) || 20) * 1024 * 1024;
 const UA = 'IMGverse-Search/1.0 (image proxy; +https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
 
+/** Default long-edge cap for batch /download when size=web. */
+export function getDownloadMaxWidth() {
+  const n = parseInt(process.env.DOWNLOAD_MAX_WIDTH, 10);
+  return Number.isFinite(n) && n > 0 ? n : 1920;
+}
+
+/** Default JPEG quality for /download (web and full). */
+export function getDownloadJpegQuality() {
+  const n = parseInt(process.env.DOWNLOAD_JPEG_QUALITY, 10);
+  return Number.isFinite(n) && n >= 1 && n <= 100 ? n : 82;
+}
+
+/**
+ * Parse /download resize options from query.size (web | full).
+ *
+ * @param {object} query
+ * @returns {{ maxWidth: number, jpegQuality: number }}
+ */
+export function parseDownloadEncodeOptions(query) {
+  const jpegQuality = getDownloadJpegQuality();
+  const size = String(query?.size || 'web').toLowerCase();
+
+  if (size === 'full' || size === 'original') {
+    return { maxWidth: 0, jpegQuality };
+  }
+
+  return { maxWidth: getDownloadMaxWidth(), jpegQuality };
+}
+
 /**
  * Normalize an output format query param.
  *
@@ -113,14 +142,25 @@ export function attachmentDisposition(basename, ext) {
  *
  * @param {Buffer} buffer - Raw upstream image bytes.
  * @param {'jpeg'|'webp'|'png'} format - Target format.
- * @param {object|null} [attribution] - Optional IPTC Caption for JPEG downloads.
+ * @param {{ maxWidth?: number, jpegQuality?: number }|null} [encodeOpts] - Download resize/quality; omit for /proxy defaults.
  * @returns {Promise<{ body: Buffer, contentType: string }>}
  */
-export async function encodeImage(buffer, format) {
+export async function encodeImage(buffer, format, encodeOpts = null) {
   let pipeline = sharp(buffer);
+  const maxWidth = encodeOpts?.maxWidth ?? 0;
+  const jpegQuality = encodeOpts?.jpegQuality ?? 88;
+
+  if (maxWidth > 0) {
+    pipeline = pipeline.resize({
+      width:              maxWidth,
+      withoutEnlargement: true,
+      fit:                'inside',
+    });
+  }
 
   if (format === 'webp') {
-    const body = await pipeline.webp({ quality: 88 }).toBuffer();
+    const q = encodeOpts ? jpegQuality : 88;
+    const body = await pipeline.webp({ quality: q }).toBuffer();
     return { body, contentType: 'image/webp' };
   }
 
@@ -129,7 +169,7 @@ export async function encodeImage(buffer, format) {
     return { body, contentType: 'image/png' };
   }
 
-  const body = await pipeline.jpeg({ quality: 88, progressive: true }).toBuffer();
+  const body = await pipeline.jpeg({ quality: jpegQuality, progressive: true }).toBuffer();
   return { body, contentType: 'image/jpeg' };
 }
 
@@ -234,10 +274,12 @@ export function parseImageUrl(rawUrl) {
  *
  * @param {string} rawUrl
  * @param {'jpeg'|'webp'|'png'} [format='jpeg']
- * @param {object|null} [attribution] - Optional IPTC Caption for JPEG downloads.
+ * @param {{ attribution?: object|null, encode?: { maxWidth: number, jpegQuality: number }|null }} [opts]
  * @returns {Promise<{ body: Buffer, contentType: string, hostname: string }>}
  */
-export async function fetchProviderImage(rawUrl, format = 'jpeg', attribution = null) {
+export async function fetchProviderImage(rawUrl, format = 'jpeg', opts = {}) {
+  const attribution = opts.attribution ?? null;
+  const encodeOpts = opts.encode ?? null;
   const parsed = parseImageUrl(rawUrl);
   const upstream = await fetchUpstream(parsed, 2, format);
 
@@ -256,7 +298,7 @@ export async function fetchProviderImage(rawUrl, format = 'jpeg', attribution = 
   }
 
   const buffer = Buffer.from(await upstream.arrayBuffer());
-  let { body, contentType } = await encodeImage(buffer, format);
+  let { body, contentType } = await encodeImage(buffer, format, encodeOpts);
 
   if (attribution && format === 'jpeg') {
     body = await embedAttributionInJpeg(body, attribution);

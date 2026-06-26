@@ -15,6 +15,7 @@ import {
   attachmentDisposition,
   fetchProviderImage,
   formatExtension,
+  parseDownloadEncodeOptions,
   parseOutputFormat,
   sanitizeDownloadName,
 } from '../lib/image-proxy.js';
@@ -33,18 +34,23 @@ const router = Router();
  *   provider   {string}  Provider id e.g. unsplash (optional)
  *   license    {string}  Licence name (optional)
  *   sourceUrl  {string}  Link to original image page (optional)
+ *   size       {string}  `web` (default, max width resize) | `full` (provider original dimensions)
  */
 router.get('/', async (req, res) => {
   const format = parseOutputFormat(req.query.fmt);
   const basename = sanitizeDownloadName(req.query.name);
   const attribution = parseAttributionFromQuery(req.query);
+  const encode = parseDownloadEncodeOptions(req.query);
 
   if (!req.query.name || !String(req.query.name).trim()) {
     return res.status(400).send('Missing name parameter.');
   }
 
   try {
-    const { body, contentType } = await fetchProviderImage(req.query.url, format, attribution);
+    const { body, contentType } = await fetchProviderImage(req.query.url, format, {
+      attribution,
+      encode,
+    });
     const ext = formatExtension(format);
 
     res.set({

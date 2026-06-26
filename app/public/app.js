@@ -206,8 +206,14 @@ function sleep(ms) {
 }
 
 /** @param {object} img @param {string} name */
+function getBatchDownloadSize() {
+    const selected = document.querySelector('input[name="batch-size"]:checked');
+    return selected?.value === 'full' ? 'full' : 'web';
+}
+
+/** @param {object} img @param {string} name */
 function buildDownloadParams(img, name) {
-    const params = new URLSearchParams({ url: img.full, name });
+    const params = new URLSearchParams({ url: img.full, name, size: getBatchDownloadSize() });
     if (img.credit)    params.set('credit', img.credit);
     if (img.provider)  params.set('provider', img.provider);
     if (img.license)   params.set('license', img.license);
