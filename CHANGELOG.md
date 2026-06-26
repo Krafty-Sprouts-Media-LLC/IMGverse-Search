@@ -5,6 +5,14 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.25] - 26/06/2026
+
+### Fixed
+- **Stale CSS/JS after deploy** — nginx was caching `style.css` and `app.js` with `Cache-Control: public, immutable` and a 7-day expiry, so the v1.0.23 pointer-events fix and v1.0.24 label rename never reached browsers that had already loaded the old files.
+  - Nginx now sends `Cache-Control: no-cache, must-revalidate` for all `.js` and `.css` responses — browsers always revalidate against ETag/Last-Modified, getting the newest file immediately after a deploy.
+  - Binary assets (images, fonts, icons) retain the 7-day immutable cache (unchanged filenames make this safe).
+  - `index.html` links `style.css?v=1.0.25` and `app.js?v=1.0.25` — an additional version query string guarantees a cache-miss even in edge cases where no-cache is not honoured (some CDN/proxy layers).
+
 ## [1.0.24] - 26/06/2026
 
 ### Changed

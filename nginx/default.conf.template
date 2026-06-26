@@ -48,8 +48,22 @@ server {
         log_not_found off;
     }
 
-    # Static assets served by the Node app — cache aggressively at nginx level
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$ {
+    # JS/CSS — always revalidate so deploys take effect immediately.
+    # Version query strings (?v=x.y.z) in index.html provide an additional
+    # layer of busting; ETag/Last-Modified is the server-side safety net.
+    location ~* \.(js|css)$ {
+        proxy_pass http://app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $real_scheme;
+        add_header Cache-Control "no-cache, must-revalidate";
+        access_log off;
+    }
+
+    # Binary assets (images, fonts, icons) — safe to cache for 7 days
+    # because these filenames don't change between releases.
+    location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$ {
         proxy_pass http://app;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
