@@ -273,11 +273,11 @@ body {
     transform: scale(1.03);
 }
 
-.img-card--saved {
+.img-card--opened {
     box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.45), var(--shadow-sm);
 }
 
-.saved-pin {
+.opened-pin {
     position: absolute;
     top: 0.65rem;
     left: 0.65rem;
@@ -380,12 +380,12 @@ body {
     color: var(--brand);
 }
 
-.btn-open--saved {
+.btn-open--opened {
     background: rgba(220, 252, 231, 0.95);
     color: #166534;
 }
 
-.btn-open--saved:hover {
+.btn-open--opened:hover {
     background: #fff;
     color: #166534;
 }

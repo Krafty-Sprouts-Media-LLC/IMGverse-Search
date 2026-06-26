@@ -5,6 +5,11 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.24] - 26/06/2026
+
+### Changed
+- Renamed the session indicator from **Saved** to **Opened** — it marks images you opened or right-clicked this tab session, not files saved to disk (`sessionStorage` key migrates from `imgverse:saved` automatically)
+
 ## [1.0.23] - 26/06/2026
 
 ### Fixed

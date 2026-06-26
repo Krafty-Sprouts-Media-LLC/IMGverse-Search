@@ -30,12 +30,20 @@ let hasNextPage        = false;
 let isLoading          = false;
 let searchToken        = 0;
 
-const SAVED_STORAGE_KEY = 'imgverse:saved';
+const OPENED_STORAGE_KEY = 'imgverse:opened';
+const LEGACY_SAVED_STORAGE_KEY = 'imgverse:saved';
 
 /** @returns {Set<string>} */
-function loadSavedKeys() {
+function loadOpenedKeys() {
     try {
-        const raw = sessionStorage.getItem(SAVED_STORAGE_KEY);
+        let raw = sessionStorage.getItem(OPENED_STORAGE_KEY);
+        if (!raw) {
+            raw = sessionStorage.getItem(LEGACY_SAVED_STORAGE_KEY);
+            if (raw) {
+                sessionStorage.setItem(OPENED_STORAGE_KEY, raw);
+                sessionStorage.removeItem(LEGACY_SAVED_STORAGE_KEY);
+            }
+        }
         return new Set(raw ? JSON.parse(raw) : []);
     } catch {
         return new Set();
@@ -43,12 +51,12 @@ function loadSavedKeys() {
 }
 
 /** @param {Set<string>} keys */
-function persistSavedKeys(keys) {
-    sessionStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify([...keys]));
+function persistOpenedKeys(keys) {
+    sessionStorage.setItem(OPENED_STORAGE_KEY, JSON.stringify([...keys]));
 }
 
 /** Stable key for the same image across pages (matches server dedupe logic). */
-function savedKey(img) {
+function imageKey(img) {
     const raw = img.full || img.thumb || '';
     try {
         const parsed = new URL(raw);
@@ -58,42 +66,42 @@ function savedKey(img) {
     }
 }
 
-function isImageSaved(img) {
-    const keys = loadSavedKeys();
-    const key  = savedKey(img);
+function isImageOpened(img) {
+    const keys = loadOpenedKeys();
+    const key  = imageKey(img);
     return Boolean(key && (keys.has(key) || keys.has(img.id)));
 }
 
-function markImageSaved(img) {
-    const key = savedKey(img);
+function markImageOpened(img) {
+    const key = imageKey(img);
     if (!key) return;
 
-    const keys = loadSavedKeys();
+    const keys = loadOpenedKeys();
     keys.add(key);
     if (img.id) keys.add(img.id);
-    persistSavedKeys(keys);
+    persistOpenedKeys(keys);
 }
 
-function applySavedState(figure, img) {
-    figure.classList.add('img-card--saved');
-    figure.setAttribute('aria-label', `${img.alt || 'Image'} — saved this session`);
+function applyOpenedState(figure, img) {
+    figure.classList.add('img-card--opened');
+    figure.setAttribute('aria-label', `${img.alt || 'Image'} — opened this session`);
 
-    let pin = figure.querySelector('.saved-pin');
+    let pin = figure.querySelector('.opened-pin');
     if (!pin) {
         pin = document.createElement('span');
-        pin.className = 'saved-pin';
-        pin.textContent = 'Saved';
+        pin.className = 'opened-pin';
+        pin.textContent = 'Opened';
         figure.insertBefore(pin, figure.firstChild);
     }
 
     const btn = figure.querySelector('.btn-open');
     if (btn) {
-        btn.classList.add('btn-open--saved');
+        btn.classList.add('btn-open--opened');
         btn.title = 'Already opened this session — click to open again';
         const svg = btn.querySelector('svg');
         btn.textContent = '';
         if (svg) btn.appendChild(svg);
-        btn.append(' Saved');
+        btn.append(' Opened');
     }
 }
 
@@ -205,14 +213,14 @@ function renderCards(results) {
     results.forEach((img) => {
         const figure = document.createElement('figure');
         figure.className = 'img-card';
-        const saved = isImageSaved(img);
+        const opened = isImageOpened(img);
 
         const aspectStyle = img.width && img.height
             ? `aspect-ratio: ${img.width} / ${img.height};`
             : '';
 
         figure.innerHTML = `
-            ${saved ? '<span class="saved-pin">Saved</span>' : ''}
+            ${opened ? '<span class="opened-pin">Opened</span>' : ''}
             <img
                 src="${escHtml(img.thumb)}"
                 alt="${escHtml(img.alt || '')}"
@@ -227,33 +235,33 @@ function renderCards(results) {
                 <div class="card-bottom">
                     ${img.credit ? `<p class="card-credit">📷 <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a></p>` : ''}
                     <a
-                        class="btn-open${saved ? ' btn-open--saved' : ''}"
+                        class="btn-open${opened ? ' btn-open--opened' : ''}"
                         href="${escHtml(img.full)}"
                         target="_blank"
                         rel="noopener"
-                        title="${saved ? 'Already opened this session — click to open again' : 'Open full-resolution image from the provider — right-click to Save As'}"
+                        title="${opened ? 'Already opened this session — click to open again' : 'Open full-resolution image from the provider — right-click to Save As'}"
                     >
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                        ${saved ? 'Saved' : 'Open full image'}
+                        ${opened ? 'Opened' : 'Open full image'}
                     </a>
                 </div>
             </div>
         `;
 
-        if (saved) {
-            figure.classList.add('img-card--saved');
-            figure.setAttribute('aria-label', `${img.alt || 'Image'} — saved this session`);
+        if (opened) {
+            figure.classList.add('img-card--opened');
+            figure.setAttribute('aria-label', `${img.alt || 'Image'} — opened this session`);
         }
 
         const openBtn = figure.querySelector('.btn-open');
         openBtn.addEventListener('click', () => {
-            markImageSaved(img);
-            applySavedState(figure, img);
+            markImageOpened(img);
+            applyOpenedState(figure, img);
         });
 
         figure.querySelector('img').addEventListener('contextmenu', () => {
-            markImageSaved(img);
-            applySavedState(figure, img);
+            markImageOpened(img);
+            applyOpenedState(figure, img);
         });
 
         grid.appendChild(figure);
