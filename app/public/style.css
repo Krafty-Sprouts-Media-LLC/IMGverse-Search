@@ -597,6 +597,10 @@ body {
     color: var(--text-muted);
 }
 
+.batch-panel__remaining {
+    color: var(--brand);
+}
+
 .batch-panel__mode {
     display: flex;
     align-items: center;

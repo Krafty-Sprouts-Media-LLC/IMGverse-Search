@@ -5,6 +5,15 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.30] - 26/06/2026
+
+### Added
+- Batch panel **keyword counter** (`16 keywords`) plus **remaining** count (`8 remaining`) and **Ready to download** when counts match
+- Keywords and image selections persist across **pagination** and in `sessionStorage` for the tab session
+
+### Changed
+- Batch UI copy uses **keywords** instead of filenames; hint explains cross-page selection
+
 ## [1.0.29] - 26/06/2026
 
 ### Added

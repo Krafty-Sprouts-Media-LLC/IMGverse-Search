@@ -26,6 +26,7 @@ const batchBody        = document.getElementById('batch-body');
 const batchFilenames   = document.getElementById('batch-filenames');
 const batchFilenameCount = document.getElementById('batch-filename-count');
 const batchSelectionCount = document.getElementById('batch-selection-count');
+const batchRemainingCount = document.getElementById('batch-remaining-count');
 const batchModeInput   = document.getElementById('batch-mode');
 const batchClearBtn    = document.getElementById('batch-clear');
 const batchDownloadBtn = document.getElementById('batch-download');
@@ -45,6 +46,8 @@ let batchSelections    = [];
 
 const OPENED_STORAGE_KEY = 'imgverse:opened';
 const LEGACY_SAVED_STORAGE_KEY = 'imgverse:saved';
+const BATCH_KEYWORDS_KEY = 'imgverse:batch-keywords';
+const BATCH_SELECTIONS_KEY = 'imgverse:batch-selections';
 
 /** @returns {Set<string>} */
 function loadOpenedKeys() {
@@ -123,6 +126,28 @@ function parseFilenames(text) {
     return String(text || '').split('\n').map((line) => line.trim()).filter(Boolean);
 }
 
+function persistBatchKeywords() {
+    sessionStorage.setItem(BATCH_KEYWORDS_KEY, batchFilenames.value);
+}
+
+function persistBatchSelections() {
+    sessionStorage.setItem(BATCH_SELECTIONS_KEY, JSON.stringify(batchSelections));
+}
+
+function loadBatchState() {
+    try {
+        const keywords = sessionStorage.getItem(BATCH_KEYWORDS_KEY);
+        if (keywords != null) batchFilenames.value = keywords;
+
+        const raw = sessionStorage.getItem(BATCH_SELECTIONS_KEY);
+        batchSelections = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(batchSelections)) batchSelections = [];
+    } catch {
+        batchSelections = [];
+    }
+    updateBatchPanel();
+}
+
 function getBatchOrder(img) {
     const key = imageKey(img);
     const idx = batchSelections.findIndex((s) => imageKey(s) === key);
@@ -167,12 +192,24 @@ function syncBatchCardUI(figure, img) {
 
 function updateBatchPanel() {
     const filenames = parseFilenames(batchFilenames.value);
-    const fileCount = filenames.length;
-    const selCount  = batchSelections.length;
-    const ready     = fileCount > 0 && fileCount === selCount;
+    const keywordCount = filenames.length;
+    const selCount     = batchSelections.length;
+    const remaining    = Math.max(0, keywordCount - selCount);
+    const ready        = keywordCount > 0 && keywordCount === selCount;
 
-    batchFilenameCount.textContent = `${fileCount} filename${fileCount === 1 ? '' : 's'}`;
+    batchFilenameCount.textContent = `${keywordCount} keyword${keywordCount === 1 ? '' : 's'}`;
     batchSelectionCount.textContent = `${selCount} image${selCount === 1 ? '' : 's'} selected`;
+
+    if (keywordCount > 0) {
+        batchRemainingCount.textContent = remaining === 0
+            ? (ready ? 'Ready to download' : '')
+            : `${remaining} remaining`;
+        batchRemainingCount.classList.toggle('hidden', remaining === 0 && !ready);
+    } else {
+        batchRemainingCount.textContent = '';
+        batchRemainingCount.classList.add('hidden');
+    }
+
     batchDownloadBtn.disabled = batchDownloading || !ready;
     batchClearBtn.disabled = batchDownloading || selCount === 0;
 
@@ -192,11 +229,13 @@ function toggleBatchSelection(img) {
         batchSelections.push(img);
     }
 
+    persistBatchSelections();
     updateBatchPanel();
 }
 
 function clearBatchSelection() {
     batchSelections = [];
+    persistBatchSelections();
     batchStatus.textContent = '';
     updateBatchPanel();
 }
@@ -272,7 +311,10 @@ batchToggle.addEventListener('click', () => {
     batchToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
 });
 
-batchFilenames.addEventListener('input', updateBatchPanel);
+batchFilenames.addEventListener('input', () => {
+    persistBatchKeywords();
+    updateBatchPanel();
+});
 
 batchModeInput.addEventListener('change', () => {
     batchMode = batchModeInput.checked;
@@ -369,6 +411,7 @@ async function fetchPage() {
             renderCards(data.results);
             updatePagination(data.total);
             pagination.classList.remove('hidden');
+            updateBatchPanel();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     } catch (err) {
@@ -471,3 +514,5 @@ function escHtml(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 }
+
+loadBatchState();
