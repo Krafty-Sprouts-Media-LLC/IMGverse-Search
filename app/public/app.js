@@ -48,6 +48,7 @@ const OPENED_STORAGE_KEY = 'imgverse:opened';
 const LEGACY_SAVED_STORAGE_KEY = 'imgverse:saved';
 const BATCH_KEYWORDS_KEY = 'imgverse:batch-keywords';
 const BATCH_SELECTIONS_KEY = 'imgverse:batch-selections';
+const BATCH_QUERY_KEY = 'imgverse:batch-query';
 
 /** @returns {Set<string>} */
 function loadOpenedKeys() {
@@ -128,10 +129,22 @@ function parseFilenames(text) {
 
 function persistBatchKeywords() {
     sessionStorage.setItem(BATCH_KEYWORDS_KEY, batchFilenames.value);
+    if (currentQuery) sessionStorage.setItem(BATCH_QUERY_KEY, currentQuery);
 }
 
 function persistBatchSelections() {
     sessionStorage.setItem(BATCH_SELECTIONS_KEY, JSON.stringify(batchSelections));
+    if (currentQuery) sessionStorage.setItem(BATCH_QUERY_KEY, currentQuery);
+}
+
+function resetBatchQueue() {
+    batchSelections = [];
+    batchFilenames.value = '';
+    sessionStorage.removeItem(BATCH_KEYWORDS_KEY);
+    sessionStorage.removeItem(BATCH_SELECTIONS_KEY);
+    sessionStorage.removeItem(BATCH_QUERY_KEY);
+    batchStatus.textContent = '';
+    updateBatchPanel();
 }
 
 function loadBatchState() {
@@ -387,9 +400,16 @@ pageNext.addEventListener('click', () => {
 });
 
 function startNewSearch(q) {
+    const queryChanged = q !== currentQuery;
+
     searchToken++;
     currentQuery = q;
     currentPage  = 1;
+
+    if (queryChanged) {
+        resetBatchQueue();
+    }
+
     goToPage(1);
 }
 
