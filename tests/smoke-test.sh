@@ -93,6 +93,14 @@ CONTENT_TYPE=$(curl -s -o /dev/null -w "%{content_type}" "${BASE_URL}/proxy?url=
 echo "${CONTENT_TYPE}" | grep -q "image/jpeg" || fail "/proxy did not return image/jpeg, got: ${CONTENT_TYPE}"
 pass "/proxy returned image/jpeg"
 
+info "Testing /download with Content-Disposition..."
+DOWNLOAD_HEADERS=$(curl -s -D - -o /dev/null "${BASE_URL}/download?url=${TEST_IMG_URL}&name=smoke-test-cat")
+echo "${DOWNLOAD_HEADERS}" | grep -qi "content-disposition: attachment" \
+    || fail "/download did not return Content-Disposition: attachment"
+echo "${DOWNLOAD_HEADERS}" | grep -qi "image/jpeg" \
+    || fail "/download did not return image/jpeg"
+pass "/download returned attachment JPEG"
+
 echo ""
 echo "=============================================="
 echo "  ALL SMOKE TESTS PASSED"

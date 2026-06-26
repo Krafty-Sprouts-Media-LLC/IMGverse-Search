@@ -16,6 +16,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import searchRouter from './routes/search.js';
 import proxyRouter from './routes/proxy.js';
+import downloadRouter from './routes/download.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -38,6 +39,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // ---------------------------------------------------------------------------
 app.use('/api/search', searchRouter);
 app.use('/proxy', proxyRouter);
+app.use('/download', downloadRouter);
 
 // Health check — used by Docker healthcheck and nginx
 app.get('/healthz', (_req, res) => {

@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css?v=1.0.25">
+    <link rel="stylesheet" href="/style.css?v=1.0.26">
 </head>
 <body>
 
@@ -61,6 +61,30 @@
         </button>
     </div>
 
+    <aside id="batch-panel" class="batch-panel" aria-label="Batch download">
+        <button type="button" id="batch-toggle" class="batch-panel__toggle" aria-expanded="false" aria-controls="batch-body">
+            <span>Batch download</span>
+            <svg class="batch-panel__chevron" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="batch-body" class="batch-panel__body hidden">
+            <p class="batch-panel__hint">Paste filenames (one per line), turn on batch mode, click images in order, then download all as separate JPEG files.</p>
+            <textarea id="batch-filenames" class="batch-panel__textarea" rows="6" placeholder="Ferret laws in West Virginia&#10;Ferret laws in Vermont&#10;Ferret laws in Utah"></textarea>
+            <div class="batch-panel__meta">
+                <span id="batch-filename-count">0 filenames</span>
+                <span id="batch-selection-count">0 images selected</span>
+            </div>
+            <label class="batch-panel__mode">
+                <input type="checkbox" id="batch-mode">
+                Batch mode — click images to assign in order
+            </label>
+            <div class="batch-panel__actions">
+                <button type="button" id="batch-clear" class="batch-btn batch-btn--secondary" disabled>Clear selection</button>
+                <button type="button" id="batch-download" class="batch-btn batch-btn--primary" disabled>Download queue</button>
+            </div>
+            <p id="batch-status" class="batch-status" aria-live="polite"></p>
+        </div>
+    </aside>
+
     <main id="main-content">
         <div id="empty-state" class="empty-state" aria-live="polite">
             <div class="empty-icon" aria-hidden="true">
@@ -86,6 +110,6 @@
         </nav>
     </main>
 
-    <script src="/app.js?v=1.0.25"></script>
+    <script src="/app.js?v=1.0.26"></script>
 </body>
 </html>

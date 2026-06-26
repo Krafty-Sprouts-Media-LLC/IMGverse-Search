@@ -5,6 +5,12 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.26] - 26/06/2026
+
+### Added
+- **Batch download** — paste filenames (one per line), enable batch mode, click images in order, then **Download queue** saves full-resolution JPEGs sequentially with your custom names via new `GET /download` route
+- Shared `lib/image-proxy.js` for `/proxy` and `/download` (whitelist, fetch, sharp encode)
+
 ## [1.0.25] - 26/06/2026
 
 ### Fixed

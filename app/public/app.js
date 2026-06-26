@@ -21,6 +21,15 @@ const pageLabel     = document.getElementById('page-label');
 const pageCount     = document.getElementById('page-count');
 const filterPills   = document.querySelectorAll('.filter-pill');
 const orientPills   = document.querySelectorAll('.orient-pill');
+const batchToggle      = document.getElementById('batch-toggle');
+const batchBody        = document.getElementById('batch-body');
+const batchFilenames   = document.getElementById('batch-filenames');
+const batchFilenameCount = document.getElementById('batch-filename-count');
+const batchSelectionCount = document.getElementById('batch-selection-count');
+const batchModeInput   = document.getElementById('batch-mode');
+const batchClearBtn    = document.getElementById('batch-clear');
+const batchDownloadBtn = document.getElementById('batch-download');
+const batchStatus      = document.getElementById('batch-status');
 
 let currentQuery       = '';
 let currentPage        = 1;
@@ -29,6 +38,10 @@ let currentOrientation = '';
 let hasNextPage        = false;
 let isLoading          = false;
 let searchToken        = 0;
+let batchMode          = false;
+let batchDownloading   = false;
+/** @type {object[]} */
+let batchSelections    = [];
 
 const OPENED_STORAGE_KEY = 'imgverse:opened';
 const LEGACY_SAVED_STORAGE_KEY = 'imgverse:saved';
@@ -104,6 +117,157 @@ function applyOpenedState(figure, img) {
         btn.append(' Opened');
     }
 }
+
+/** @param {string} text */
+function parseFilenames(text) {
+    return String(text || '').split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+function getBatchOrder(img) {
+    const key = imageKey(img);
+    const idx = batchSelections.findIndex((s) => imageKey(s) === key);
+    return idx >= 0 ? idx + 1 : 0;
+}
+
+function syncBatchCardUI(figure, img) {
+    const order = getBatchOrder(img);
+    let badge = figure.querySelector('.batch-order');
+    let label = figure.querySelector('.batch-filename-preview');
+
+    if (order === 0) {
+        figure.classList.remove('img-card--batch-selected');
+        badge?.remove();
+        label?.remove();
+        return;
+    }
+
+    figure.classList.add('img-card--batch-selected');
+
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'batch-order';
+        figure.appendChild(badge);
+    }
+    badge.textContent = String(order);
+
+    const filenames = parseFilenames(batchFilenames.value);
+    const fname = filenames[order - 1] || '';
+
+    if (fname) {
+        if (!label) {
+            label = document.createElement('span');
+            label.className = 'batch-filename-preview';
+            figure.appendChild(label);
+        }
+        label.textContent = fname;
+    } else {
+        label?.remove();
+    }
+}
+
+function updateBatchPanel() {
+    const filenames = parseFilenames(batchFilenames.value);
+    const fileCount = filenames.length;
+    const selCount  = batchSelections.length;
+    const ready     = fileCount > 0 && fileCount === selCount;
+
+    batchFilenameCount.textContent = `${fileCount} filename${fileCount === 1 ? '' : 's'}`;
+    batchSelectionCount.textContent = `${selCount} image${selCount === 1 ? '' : 's'} selected`;
+    batchDownloadBtn.disabled = batchDownloading || !ready;
+    batchClearBtn.disabled = batchDownloading || selCount === 0;
+
+    grid.querySelectorAll('.img-card').forEach((figure) => {
+        const img = figure.__imgData;
+        if (img) syncBatchCardUI(figure, img);
+    });
+}
+
+function toggleBatchSelection(img) {
+    const key = imageKey(img);
+    const idx = batchSelections.findIndex((s) => imageKey(s) === key);
+
+    if (idx >= 0) {
+        batchSelections.splice(idx, 1);
+    } else {
+        batchSelections.push(img);
+    }
+
+    updateBatchPanel();
+}
+
+function clearBatchSelection() {
+    batchSelections = [];
+    batchStatus.textContent = '';
+    updateBatchPanel();
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runBatchDownload() {
+    const filenames = parseFilenames(batchFilenames.value);
+    if (filenames.length !== batchSelections.length || filenames.length === 0) return;
+
+    batchDownloading = true;
+    batchDownloadBtn.textContent = 'Downloading…';
+    updateBatchPanel();
+
+    let failed = 0;
+    const total = batchSelections.length;
+
+    for (let i = 0; i < total; i++) {
+        const img  = batchSelections[i];
+        const name = filenames[i];
+        batchStatus.textContent = `Downloading ${i + 1} of ${total}: ${name}`;
+
+        try {
+            const params = new URLSearchParams({ url: img.full, name });
+            const res = await fetch(`/download?${params}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = blobUrl;
+            anchor.download = `${name}.jpg`;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            failed++;
+            console.error('[IMGverse/batch]', name, err.message);
+        }
+
+        if (i < total - 1) await sleep(700);
+    }
+
+    batchDownloading = false;
+    batchDownloadBtn.textContent = 'Download queue';
+    batchStatus.textContent = failed
+        ? `Finished with ${failed} error${failed === 1 ? '' : 's'}. Check the console.`
+        : `Downloaded ${total} file${total === 1 ? '' : 's'}.`;
+    updateBatchPanel();
+}
+
+batchToggle.addEventListener('click', () => {
+    const collapsed = batchBody.classList.toggle('hidden');
+    batchToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+});
+
+batchFilenames.addEventListener('input', updateBatchPanel);
+
+batchModeInput.addEventListener('change', () => {
+    batchMode = batchModeInput.checked;
+    grid.classList.toggle('grid--batch-mode', batchMode);
+    batchStatus.textContent = batchMode
+        ? 'Batch mode on — click images in the order they should match your filenames.'
+        : '';
+});
+
+batchClearBtn.addEventListener('click', clearBatchSelection);
+batchDownloadBtn.addEventListener('click', runBatchDownload);
 
 searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -253,6 +417,9 @@ function renderCards(results) {
             figure.setAttribute('aria-label', `${img.alt || 'Image'} — opened this session`);
         }
 
+        figure.__imgData = img;
+        syncBatchCardUI(figure, img);
+
         const openBtn = figure.querySelector('.btn-open');
         openBtn.addEventListener('click', () => {
             markImageOpened(img);
@@ -262,6 +429,12 @@ function renderCards(results) {
         figure.querySelector('img').addEventListener('contextmenu', () => {
             markImageOpened(img);
             applyOpenedState(figure, img);
+        });
+
+        figure.addEventListener('click', (e) => {
+            if (!batchMode || batchDownloading) return;
+            if (e.target.closest('a')) return;
+            toggleBatchSelection(img);
         });
 
         grid.appendChild(figure);
