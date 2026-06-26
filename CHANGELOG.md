@@ -5,6 +5,11 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.23] - 26/06/2026
+
+### Fixed
+- Grid thumbnails accept right-click again (Save image as / Open image in new tab). The hover overlay was capturing all pointer events on top of the `<img>`; overlay is now click-through except for the Open button and credit link.
+
 ## [1.0.22] - 14/06/2026
 
 ### Added
