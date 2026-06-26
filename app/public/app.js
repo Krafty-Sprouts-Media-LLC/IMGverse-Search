@@ -193,18 +193,31 @@ function syncBatchCardUI(figure, img) {
 function updateBatchPanel() {
     const filenames = parseFilenames(batchFilenames.value);
     const keywordCount = filenames.length;
-    const selCount     = batchSelections.length;
-    const remaining    = Math.max(0, keywordCount - selCount);
-    const ready        = keywordCount > 0 && keywordCount === selCount;
+
+    if (keywordCount > 0 && batchSelections.length > keywordCount) {
+        batchSelections = batchSelections.slice(0, keywordCount);
+        persistBatchSelections();
+    }
+
+    const selCount  = batchSelections.length;
+    const remaining = Math.max(0, keywordCount - selCount);
+    const ready     = keywordCount > 0 && keywordCount === selCount;
+    const atCap     = keywordCount > 0 && selCount >= keywordCount;
 
     batchFilenameCount.textContent = `${keywordCount} keyword${keywordCount === 1 ? '' : 's'}`;
     batchSelectionCount.textContent = `${selCount} image${selCount === 1 ? '' : 's'} selected`;
 
     if (keywordCount > 0) {
-        batchRemainingCount.textContent = remaining === 0
-            ? (ready ? 'Ready to download' : '')
-            : `${remaining} remaining`;
-        batchRemainingCount.classList.toggle('hidden', remaining === 0 && !ready);
+        if (ready) {
+            batchRemainingCount.textContent = 'Ready to download';
+            batchRemainingCount.classList.remove('hidden');
+        } else if (atCap) {
+            batchRemainingCount.textContent = 'All keywords assigned';
+            batchRemainingCount.classList.remove('hidden');
+        } else {
+            batchRemainingCount.textContent = `${remaining} remaining`;
+            batchRemainingCount.classList.remove('hidden');
+        }
     } else {
         batchRemainingCount.textContent = '';
         batchRemainingCount.classList.add('hidden');
@@ -212,6 +225,7 @@ function updateBatchPanel() {
 
     batchDownloadBtn.disabled = batchDownloading || !ready;
     batchClearBtn.disabled = batchDownloading || selCount === 0;
+    grid.classList.toggle('grid--batch-full', batchMode && atCap);
 
     grid.querySelectorAll('.img-card').forEach((figure) => {
         const img = figure.__imgData;
@@ -222,11 +236,21 @@ function updateBatchPanel() {
 function toggleBatchSelection(img) {
     const key = imageKey(img);
     const idx = batchSelections.findIndex((s) => imageKey(s) === key);
+    const keywordCount = parseFilenames(batchFilenames.value).length;
 
     if (idx >= 0) {
         batchSelections.splice(idx, 1);
     } else {
+        if (keywordCount === 0) {
+            batchStatus.textContent = 'Paste keywords first (one per line).';
+            return;
+        }
+        if (batchSelections.length >= keywordCount) {
+            batchStatus.textContent = 'All keywords assigned — click a selected image to deselect, then pick another.';
+            return;
+        }
         batchSelections.push(img);
+        batchStatus.textContent = '';
     }
 
     persistBatchSelections();
