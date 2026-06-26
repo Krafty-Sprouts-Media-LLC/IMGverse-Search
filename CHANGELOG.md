@@ -5,6 +5,16 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.28] - 26/06/2026
+
+### Fixed
+- Batch download attribution now writes **IPTC Caption-Abstract** only (the Caption field) via `exiftool-vendored` — explicitly clears EXIF/XMP **Description** (`ImageDescription`, `dc:description`) so credits do not land in the wrong metadata field
+
+## [1.0.27] - 26/06/2026
+
+### Added
+- Batch **Download queue** embeds photographer attribution in each JPEG — format: `Photo by {credit} on {Provider} — {license} — {sourceUrl}`
+
 ## [1.0.26] - 26/06/2026
 
 ### Added

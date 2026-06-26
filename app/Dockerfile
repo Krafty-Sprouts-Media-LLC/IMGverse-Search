@@ -11,8 +11,8 @@
 
 FROM node:20-alpine
 
-# wget for Docker healthcheck
-RUN apk add --no-cache wget
+# wget for Docker healthcheck; perl for exiftool-vendored (IPTC caption embedding)
+RUN apk add --no-cache wget perl
 
 WORKDIR /app
 

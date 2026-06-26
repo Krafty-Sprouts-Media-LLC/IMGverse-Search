@@ -205,6 +205,16 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** @param {object} img @param {string} name */
+function buildDownloadParams(img, name) {
+    const params = new URLSearchParams({ url: img.full, name });
+    if (img.credit)    params.set('credit', img.credit);
+    if (img.provider)  params.set('provider', img.provider);
+    if (img.license)   params.set('license', img.license);
+    if (img.sourceUrl) params.set('sourceUrl', img.sourceUrl);
+    return params;
+}
+
 async function runBatchDownload() {
     const filenames = parseFilenames(batchFilenames.value);
     if (filenames.length !== batchSelections.length || filenames.length === 0) return;
@@ -222,7 +232,7 @@ async function runBatchDownload() {
         batchStatus.textContent = `Downloading ${i + 1} of ${total}: ${name}`;
 
         try {
-            const params = new URLSearchParams({ url: img.full, name });
+            const params = buildDownloadParams(img, name);
             const res = await fetch(`/download?${params}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
 

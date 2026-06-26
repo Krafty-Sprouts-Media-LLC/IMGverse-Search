@@ -560,6 +560,13 @@ body {
     line-height: 1.5;
 }
 
+.batch-panel__hint code {
+    font-size: 0.78rem;
+    background: var(--bg);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+}
+
 .batch-panel__textarea {
     width: 100%;
     min-height: 7rem;

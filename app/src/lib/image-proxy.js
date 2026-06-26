@@ -11,6 +11,7 @@
 
 import fetch from 'node-fetch';
 import sharp from 'sharp';
+import { embedAttributionInJpeg } from './attribution.js';
 
 export const ALLOWED_DOMAINS = new Set([
   'images.unsplash.com',
@@ -112,22 +113,23 @@ export function attachmentDisposition(basename, ext) {
  *
  * @param {Buffer} buffer - Raw upstream image bytes.
  * @param {'jpeg'|'webp'|'png'} format - Target format.
+ * @param {object|null} [attribution] - Optional IPTC Caption for JPEG downloads.
  * @returns {Promise<{ body: Buffer, contentType: string }>}
  */
 export async function encodeImage(buffer, format) {
-  const image = sharp(buffer);
+  let pipeline = sharp(buffer);
 
   if (format === 'webp') {
-    const body = await image.webp({ quality: 88 }).toBuffer();
+    const body = await pipeline.webp({ quality: 88 }).toBuffer();
     return { body, contentType: 'image/webp' };
   }
 
   if (format === 'png') {
-    const body = await image.png({ compressionLevel: 8 }).toBuffer();
+    const body = await pipeline.png({ compressionLevel: 8 }).toBuffer();
     return { body, contentType: 'image/png' };
   }
 
-  const body = await image.jpeg({ quality: 88, progressive: true }).toBuffer();
+  const body = await pipeline.jpeg({ quality: 88, progressive: true }).toBuffer();
   return { body, contentType: 'image/jpeg' };
 }
 
@@ -232,9 +234,10 @@ export function parseImageUrl(rawUrl) {
  *
  * @param {string} rawUrl
  * @param {'jpeg'|'webp'|'png'} [format='jpeg']
+ * @param {object|null} [attribution] - Optional IPTC Caption for JPEG downloads.
  * @returns {Promise<{ body: Buffer, contentType: string, hostname: string }>}
  */
-export async function fetchProviderImage(rawUrl, format = 'jpeg') {
+export async function fetchProviderImage(rawUrl, format = 'jpeg', attribution = null) {
   const parsed = parseImageUrl(rawUrl);
   const upstream = await fetchUpstream(parsed, 2, format);
 
@@ -253,7 +256,11 @@ export async function fetchProviderImage(rawUrl, format = 'jpeg') {
   }
 
   const buffer = Buffer.from(await upstream.arrayBuffer());
-  const { body, contentType } = await encodeImage(buffer, format);
+  let { body, contentType } = await encodeImage(buffer, format);
+
+  if (attribution && format === 'jpeg') {
+    body = await embedAttributionInJpeg(body, attribution);
+  }
 
   return { body, contentType, hostname: parsed.hostname };
 }

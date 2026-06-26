@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import searchRouter from './routes/search.js';
 import proxyRouter from './routes/proxy.js';
 import downloadRouter from './routes/download.js';
+import { shutdownExiftool } from './lib/attribution.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -52,3 +53,14 @@ app.get('/healthz', (_req, res) => {
 app.listen(PORT, () => {
   console.log(`[IMGverse] Server running on port ${PORT}`);
 });
+
+async function gracefulShutdown(signal) {
+  console.log(`[IMGverse] ${signal} received, shutting down…`);
+  await shutdownExiftool().catch((err) => {
+    console.error('[IMGverse] exiftool shutdown error:', err.message);
+  });
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
