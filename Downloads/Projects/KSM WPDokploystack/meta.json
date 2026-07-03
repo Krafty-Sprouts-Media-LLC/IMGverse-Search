@@ -1,0 +1,15 @@
+[
+  {
+    "id": "wordpress-redis-stack",
+    "name": "WordPress + Redis Stack",
+    "version": "1.1.0",
+    "description": "Production-ready WordPress with Nginx, Redis caching, phpMyAdmin, and WP-CLI",
+    "logo": "logo.svg",
+    "links": {
+      "github": "https://github.com/Krafty-Sprouts-Media-LLC/WPDokploystack",
+      "docs": "https://github.com/Krafty-Sprouts-Media-LLC/WPDokploystack#readme",
+      "upstream": "https://github.com/itsmereal/dokploy-wp"
+    },
+    "tags": ["wordpress", "cms", "redis", "nginx", "self-hosted"]
+  }
+]
