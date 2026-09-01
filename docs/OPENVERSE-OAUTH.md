@@ -24,7 +24,11 @@ Root cause: Openverse sits behind Cloudflare. Many datacenter IPs are blocked fo
 
 ### Total Cloudflare block (OAuth also fails)
 
-If logs show **"Just a moment..."** HTML on the **token** endpoint (`/v1/auth_tokens/token/`), Cloudflare is blocking **all** Openverse traffic from your server IP — OAuth cannot fix this. Use Wikimedia Commons or contact Openverse to whitelist your IP ([issue #5478](https://github.com/WordPress/openverse/issues/5478)).
+If logs show **"Just a moment..."** HTML on the **token** endpoint (`/v1/auth_tokens/token/`), Cloudflare is blocking **all** Openverse traffic from your **server IP** — OAuth cannot fix server-side calls.
+
+**Code fix for a search UI:** call `https://api.openverse.org/v1/images/` from the **browser** (real user IP; CORS `Access-Control-Allow-Origin: *`). Keep image download/proxy on the server — full-size files are usually Flickr/Wikimedia, not `api.openverse.org`. That is what IMGverse Search does in `app/public/openverse-client.js`.
+
+Server-only tools still need an IP whitelist ([issue #5478](https://github.com/WordPress/openverse/issues/5478)) or Wikimedia Commons.
 
 Official reference: [Authentication and Throttling](https://docs.openverse.org/api/reference/authentication_and_throttling.html)
 
@@ -312,7 +316,7 @@ OPENVERSE_CLIENT_SECRET=your_client_secret
 
 | Error | Likely cause | Fix |
 |-------|--------------|-----|
-| Token response is HTML **"Just a moment..."** | Cloudflare total block on your server IP | **No code fix** — use Wikimedia Commons; ask Openverse to whitelist IP |
+| Token response is HTML **"Just a moment..."** | Cloudflare total block on your server IP | Search Openverse from the browser; do not call the API from that host |
 | `403` on `/v1/images/` without token | Datacenter IP blocked | Register OAuth and send Bearer token |
 | `403` with token | Email not verified | Click verification link in email |
 | `401` on `/v1/auth_tokens/token/` | Wrong `client_id` or `client_secret` | Re-copy from registration response |
@@ -352,10 +356,12 @@ Response headers include rate-limit info, e.g.:
 
 ## IMGverse Search — project-specific notes
 
-This repo implements OAuth in:
+Production search does **not** use this OAuth path. The UI searches Openverse from the browser (`app/public/openverse-client.js`) because this host's IP is Cloudflare-blocked.
+
+Server OAuth remains in:
 
 - `app/src/providers/openverse-auth.js` — token cache + refresh
-- `app/src/providers/openverse.js` — search with Bearer header
+- `app/src/providers/openverse.js` — search with Bearer header (not wired into `searchAll`)
 
 Registered app: **IMGverse Search** (`kingsleyfelix9@gmail.com`) — verified and active.
 

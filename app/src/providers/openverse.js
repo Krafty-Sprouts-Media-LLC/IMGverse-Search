@@ -1,8 +1,10 @@
 // =============================================================================
 // src/providers/openverse.js
-// IMGverse Search — Openverse provider adapter.
-// Free API; OAuth credentials recommended on VPS/datacenter hosts (Cloudflare
-// returns HTTP 403 to anonymous requests from many datacenter IP ranges).
+// IMGverse Search — Openverse provider adapter (server-side).
+// Production search uses the browser (`app/public/openverse-client.js`) because
+// Cloudflare challenges datacenter IPs — including OAuth token requests.
+// This adapter remains for local/non-blocked hosts. Do not re-add it to
+// searchAll() on a VPS that gets "Just a moment..." HTML.
 // Docs: https://api.openverse.org/v1/
 //
 // @package IMGverse-Search

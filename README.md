@@ -20,13 +20,14 @@ Deployed as a single Dokploy Docker Compose stack. Same zero-stress pattern as K
 
 ```
 User searches "monkey"
-  → Express fans out to all APIs at once
+  → Browser fetches Openverse directly (avoids Cloudflare on the VPS IP)
+  → Express fans out to Unsplash, Pexels, Pixabay, iNaturalist
   → Grid thumbnails load directly from provider CDNs (JPEG, WebP, AVIF — whatever the provider serves)
   → "Open full image" links directly to the provider's full-res CDN URL
   → Right-click → Save As → you get the file in the provider's native format
 ```
 
-No format conversion. No proxy in the normal user flow. Images are exactly what Unsplash, Pexels, Pixabay, etc. return from their APIs.
+No format conversion. No proxy in the normal user flow. Images are exactly what Unsplash, Pexels, Pixabay, Openverse sources, etc. return from their APIs.
 
 ---
 
@@ -95,16 +96,16 @@ All variables are documented in [`.env.example`](.env.example).
 | `PEXELS_KEY` | No | — | Pexels API key (free at pexels.com/api) |
 | `PIXABAY_KEY` | No | — | Pixabay API key (free at pixabay.com/api) |
 | `FLICKR_KEY` | No | — | Flickr API key (free at flickr.com/services/apps/create) |
-| `OPENVERSE_CLIENT_ID` | No* | — | Openverse OAuth client ID — *required on many VPS/datacenter hosts |
-| `OPENVERSE_CLIENT_SECRET` | No* | — | Openverse OAuth client secret |
+| `OPENVERSE_CLIENT_ID` | No | — | Unused by the UI (browser search). Kept for the unused server adapter. |
+| `OPENVERSE_CLIENT_SECRET` | No | — | Unused by the UI (browser search). Kept for the unused server adapter. |
 | `PROXY_MAX_SIZE_MB` | No | `20` | Maximum proxied image size in MB |
 | `REDIS_MAXMEMORY` | No | `256mb` | Redis memory cap |
 
-> **Openverse** on VPS hosts requires OAuth (HTTP 403 otherwise). Full guide: **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)**. **iNaturalist** needs no key.
+> **Openverse** is searched from the **browser** so Cloudflare cannot block the VPS. OAuth is not required for this app. Guide for other server-side projects: **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)**. **iNaturalist** needs no key.
 
-### Openverse OAuth (403 fix on VPS)
+### Openverse on VPS (Cloudflare 403)
 
-See **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)** — register, verify email, get token, code examples (Node, Python, curl, PowerShell), troubleshooting. Copy to any project hitting Openverse 403.
+Search Openverse from the user's browser, not from Node. See **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)** if you still need server-side OAuth for another project.
 
 ---
 
@@ -112,7 +113,7 @@ See **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)** — register, verify 
 
 | Provider | Key Required | Free Limit | Notes |
 |----------|-------------|------------|-------|
-| Openverse | OAuth on VPS | Unlimited | Often **blocked entirely** by Cloudflare on VPS — use Wikimedia instead |
+| Openverse | No (browser search) | Anonymous `page_size` max 20 | Searched from the browser; VPS IP is not used |
 | Wikimedia | No | Unlimited | CC/public domain; no key; best Openverse alternative on VPS |
 | Flickr | Yes (free) | Rate limited | CC-licensed photos only — key at flickr.com/services/apps/create |
 | iNaturalist | No | Unlimited | Nature & wildlife photography |

@@ -13,7 +13,7 @@ Current and candidate providers for IMGverse Search.
 | **Wikimedia Commons** | None | CC/public domain, huge archive |
 | **Flickr** | `FLICKR_KEY` | CC-licensed photos only |
 | **iNaturalist** | None | Nature & wildlife only |
-| **Openverse** | OAuth on VPS | CC content; **blocked on some hosts by Cloudflare** — see [OPENVERSE-OAUTH.md](OPENVERSE-OAUTH.md) |
+| **Openverse** | None (browser search) | CC content; searched from the **user's browser** so Cloudflare cannot challenge the VPS IP |
 
 ## Good candidates to add next
 
@@ -26,15 +26,13 @@ Current and candidate providers for IMGverse Search.
 | **Giphy** | Yes | Rate limited | GIFs only — not stock photos |
 | **Shutterstock / Adobe Stock / Getty** | Yes | Paid commercial | Not suitable for free aggregator |
 
-## Openverse on VPS (your current issue)
+## Openverse on VPS
 
-Your logs show Cloudflare returning **"Just a moment..."** on the **OAuth token endpoint** — not just search. That means:
+Cloudflare challenges datacenter IPs with a **"Just a moment..."** page — including the OAuth token endpoint. OAuth cannot fix a total IP block.
 
-- OAuth credentials are correct and verified
-- Cloudflare is blocking **all** `api.openverse.org` traffic from your server IP
-- **No code fix** — Openverse cannot run on that host until Openverse/Cloudflare whitelist your IP ([GitHub #5478](https://github.com/WordPress/openverse/issues/5478))
+**Fix used in this app:** search Openverse from the browser (`app/public/openverse-client.js`). Gutenberg does the same (`Access-Control-Allow-Origin: *`). Full-size files are Flickr/Wikimedia/etc., so `/proxy` and `/download` stay on the server.
 
-**Workaround:** Use **Wikimedia Commons** (similar CC content, no Cloudflare block) plus Unsplash/Pexels/Pixabay.
+Do **not** add Openverse back to `searchAll()` on a blocked host. Cap anonymous `page_size` at **20**. Never put OAuth secrets in the browser.
 
 ## Adding a new provider
 

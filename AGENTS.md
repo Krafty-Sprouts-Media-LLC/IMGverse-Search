@@ -43,15 +43,16 @@ Instructions for AI agents and contributors working on **IMGverse Search**.
 
 | Path | Purpose |
 |------|---------|
-| `app/src/providers/` | Provider adapters (Openverse, iNaturalist, Unsplash, Pexels, Pixabay) |
-| `app/src/routes/search.js` | Search API + Redis cache |
+| `app/src/providers/` | Provider adapters (iNaturalist, Unsplash, Pexels, Pixabay; Openverse server adapter unused on blocked hosts) |
+| `app/src/routes/search.js` | Search API + Redis cache (not Openverse) |
 | `app/src/routes/proxy.js` | Image proxy whitelist and JPEG conversion |
+| `app/public/openverse-client.js` | Browser Openverse search (avoids Cloudflare on VPS IPs) |
 | `app/public/app.js` | Frontend search UI |
 | `CHANGELOG.md` | Release notes (source for GitHub Releases) |
 | `meta.json` | Stack metadata and current version |
 
 ## Provider notes
 
-- **Openverse OAuth:** see [`docs/OPENVERSE-OAUTH.md`](docs/OPENVERSE-OAUTH.md) — full registration/token guide for fixing HTTP 403 on VPS hosts (reusable across projects).
+- **Openverse:** search from the **browser** (`app/public/openverse-client.js`). Do not call Openverse from Node on typical VPS hosts — Cloudflare returns "Just a moment..." even on the OAuth token endpoint. OAuth guide for other projects: [`docs/OPENVERSE-OAUTH.md`](docs/OPENVERSE-OAUTH.md).
 - **Unsplash, Pexels, Pixabay** require keys in `.env`.
 - Openverse failures previously produced **no log lines** because errors were swallowed in the adapter; always log provider errors when touching that code.

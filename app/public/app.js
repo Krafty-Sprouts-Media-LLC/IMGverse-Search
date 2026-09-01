@@ -9,6 +9,13 @@
 
 'use strict';
 
+import {
+    mergeHasNext,
+    searchOpenverse,
+    shouldFetchOpenverse,
+    weaveOpenverse,
+} from './openverse-client.js?v=1.0.33';
+
 const searchForm    = document.getElementById('search-form');
 const searchInput   = document.getElementById('search-input');
 const grid          = document.getElementById('grid');
@@ -421,6 +428,35 @@ function goToPage(page) {
     fetchPage();
 }
 
+async function fetchServerSearch() {
+    const params = new URLSearchParams({
+        q:    currentQuery,
+        page: String(currentPage),
+    });
+    if (currentProvider)    params.set('providers',   currentProvider);
+    if (currentOrientation) params.set('orientation', currentOrientation);
+
+    const res  = await fetch(`/api/search?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Search failed');
+
+    return {
+        results: Array.isArray(data.results) ? data.results : [],
+        hasNext: Boolean(data.hasNext),
+    };
+}
+
+function dedupeClientResults(results) {
+    const seen = new Set();
+    return results.filter((img) => {
+        const key = imageKey(img);
+        if (!key || seen.has(key) || seen.has(img.id)) return false;
+        seen.add(key);
+        if (img.id) seen.add(img.id);
+        return true;
+    });
+}
+
 async function fetchPage() {
     if (isLoading || !currentQuery) return;
 
@@ -429,31 +465,49 @@ async function fetchPage() {
     loader.classList.remove('hidden');
 
     try {
-        const params = new URLSearchParams({
-            q:    currentQuery,
-            page: String(currentPage),
-        });
-        if (currentProvider)    params.set('providers',   currentProvider);
-        if (currentOrientation) params.set('orientation', currentOrientation);
+        const wantOpenverse = shouldFetchOpenverse(currentProvider);
+        const wantServer    = currentProvider !== 'openverse';
 
-        const res  = await fetch(`/api/search?${params}`);
-        const data = await res.json();
+        const serverPromise = wantServer
+            ? fetchServerSearch().catch((err) => {
+                console.error('[IMGverse]', err.message);
+                return { results: [], hasNext: false };
+            })
+            : Promise.resolve({ results: [], hasNext: false });
 
-        if (!res.ok) throw new Error(data.error || 'Search failed');
+        const openversePromise = wantOpenverse
+            ? searchOpenverse({
+                q:           currentQuery,
+                page:        currentPage,
+                orientation: currentOrientation,
+            })
+            : Promise.resolve({ images: [], hasNext: false, error: '' });
+
+        const [server, openverse] = await Promise.all([serverPromise, openversePromise]);
+
         if (token !== searchToken) return;
 
-        hasNextPage = Boolean(data.hasNext);
+        if (openverse.error) {
+            console.error('[IMGverse/openverse]', openverse.error);
+        }
 
-        if (data.results.length === 0) {
+        const results = dedupeClientResults(weaveOpenverse(server.results, openverse.images));
+        hasNextPage = mergeHasNext(server.hasNext, openverse.hasNext);
+
+        if (results.length === 0) {
             if (currentPage === 1) {
-                showEmptyState();
+                showEmptyState(
+                    currentProvider === 'openverse' && openverse.error
+                        ? openverse.error
+                        : undefined
+                );
             } else {
                 hasNextPage = false;
                 updatePagination();
             }
         } else {
-            renderCards(data.results);
-            updatePagination(data.total);
+            renderCards(results);
+            updatePagination(results.length);
             pagination.classList.remove('hidden');
             updateBatchPanel();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -544,11 +598,12 @@ function renderCards(results) {
     });
 }
 
-function showEmptyState() {
+function showEmptyState(message) {
     emptyState.classList.remove('hidden');
     pagination.classList.add('hidden');
     emptyState.querySelector('h2').textContent = `No results for "${currentQuery}"`;
-    emptyState.querySelector('p').textContent  = 'Try a different keyword or check that at least one provider is configured.';
+    emptyState.querySelector('p').textContent  = message
+        || 'Try a different keyword or check that at least one provider is configured.';
 }
 
 function escHtml(str) {
