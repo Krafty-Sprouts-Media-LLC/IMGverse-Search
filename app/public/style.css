@@ -688,6 +688,19 @@ body {
     min-height: 1.25rem;
 }
 
+.batch-failures {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-base);
+    line-height: 1.45;
+}
+
+.batch-failures li {
+    margin: 0.15rem 0;
+}
+
 .grid--batch-mode .img-card {
     cursor: crosshair;
 }

@@ -15,6 +15,11 @@ import {
     shouldFetchOpenverse,
     weaveOpenverse,
 } from './openverse-client.js?v=1.0.33';
+import {
+    formatBatchFailureLine,
+    formatBatchFinishMessage,
+    messageFromDownloadResponse,
+} from './batch-helpers.js?v=1.0.34';
 
 const searchForm    = document.getElementById('search-form');
 const searchInput   = document.getElementById('search-input');
@@ -37,7 +42,9 @@ const batchRemainingCount = document.getElementById('batch-remaining-count');
 const batchModeInput   = document.getElementById('batch-mode');
 const batchClearBtn    = document.getElementById('batch-clear');
 const batchDownloadBtn = document.getElementById('batch-download');
+const batchRetryBtn    = document.getElementById('batch-retry');
 const batchStatus      = document.getElementById('batch-status');
+const batchFailureList = document.getElementById('batch-failures');
 
 let currentQuery       = '';
 let currentPage        = 1;
@@ -50,6 +57,8 @@ let batchMode          = false;
 let batchDownloading   = false;
 /** @type {object[]} */
 let batchSelections    = [];
+/** @type {{ img: object, name: string, error: string }[]} */
+let batchFailures      = [];
 
 const OPENED_STORAGE_KEY = 'imgverse:opened';
 const LEGACY_SAVED_STORAGE_KEY = 'imgverse:saved';
@@ -151,6 +160,7 @@ function resetBatchQueue() {
     sessionStorage.removeItem(BATCH_SELECTIONS_KEY);
     sessionStorage.removeItem(BATCH_QUERY_KEY);
     batchStatus.textContent = '';
+    clearBatchFailures();
     updateBatchPanel();
 }
 
@@ -245,6 +255,7 @@ function updateBatchPanel() {
 
     batchDownloadBtn.disabled = batchDownloading || !ready;
     batchClearBtn.disabled = batchDownloading || selCount === 0;
+    renderBatchFailures();
     grid.classList.toggle('grid--batch-full', batchMode && atCap);
 
     grid.querySelectorAll('.img-card').forEach((figure) => {
@@ -274,6 +285,7 @@ function toggleBatchSelection(img) {
     }
 
     persistBatchSelections();
+    clearBatchFailures();
     updateBatchPanel();
 }
 
@@ -281,6 +293,7 @@ function clearBatchSelection() {
     batchSelections = [];
     persistBatchSelections();
     batchStatus.textContent = '';
+    clearBatchFailures();
     updateBatchPanel();
 }
 
@@ -304,39 +317,79 @@ function buildDownloadParams(img, name) {
     return params;
 }
 
-async function runBatchDownload() {
+function clearBatchFailures() {
+    batchFailures = [];
+    renderBatchFailures();
+}
+
+function renderBatchFailures() {
+    batchFailureList.replaceChildren();
+
+    if (!batchFailures.length) {
+        batchFailureList.classList.add('hidden');
+        batchRetryBtn.classList.add('hidden');
+        batchRetryBtn.disabled = true;
+        batchRetryBtn.textContent = 'Retry failed';
+        return;
+    }
+
+    batchFailureList.classList.remove('hidden');
+    batchRetryBtn.classList.remove('hidden');
+    batchRetryBtn.disabled = batchDownloading;
+    batchRetryBtn.textContent = `Retry ${batchFailures.length} failed`;
+
+    batchFailures.forEach((failure) => {
+        const li = document.createElement('li');
+        li.textContent = formatBatchFailureLine(failure);
+        batchFailureList.appendChild(li);
+    });
+}
+
+async function downloadBatchItem(img, name) {
+    const params = buildDownloadParams(img, name);
+    const res = await fetch(`/download?${params}`);
+    if (!res.ok) {
+        const body = await res.text();
+        throw new Error(messageFromDownloadResponse(res.status, body));
+    }
+
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = `${name}.jpg`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(blobUrl);
+}
+
+function queueFromSelections() {
     const filenames = parseFilenames(batchFilenames.value);
-    if (filenames.length !== batchSelections.length || filenames.length === 0) return;
+    if (filenames.length !== batchSelections.length || filenames.length === 0) return [];
+    return batchSelections.map((img, i) => ({ img, name: filenames[i] }));
+}
+
+async function runBatchQueue(queue) {
+    if (!queue.length || batchDownloading) return;
 
     batchDownloading = true;
     batchDownloadBtn.textContent = 'Downloading…';
     updateBatchPanel();
 
-    let failed = 0;
-    const total = batchSelections.length;
+    const nextFailures = [];
+    const total = queue.length;
 
     for (let i = 0; i < total; i++) {
-        const img  = batchSelections[i];
-        const name = filenames[i];
+        const { img, name } = queue[i];
         batchStatus.textContent = `Downloading ${i + 1} of ${total}: ${name}`;
 
         try {
-            const params = buildDownloadParams(img, name);
-            const res = await fetch(`/download?${params}`);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            const anchor = document.createElement('a');
-            anchor.href = blobUrl;
-            anchor.download = `${name}.jpg`;
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
-            URL.revokeObjectURL(blobUrl);
+            await downloadBatchItem(img, name);
         } catch (err) {
-            failed++;
-            console.error('[IMGverse/batch]', name, err.message);
+            const error = err.message || 'Download failed';
+            nextFailures.push({ img, name, error });
+            console.error('[IMGverse/batch]', name, error);
         }
 
         if (i < total - 1) await sleep(700);
@@ -344,10 +397,18 @@ async function runBatchDownload() {
 
     batchDownloading = false;
     batchDownloadBtn.textContent = 'Download queue';
-    batchStatus.textContent = failed
-        ? `Finished with ${failed} error${failed === 1 ? '' : 's'}. Check the console.`
-        : `Downloaded ${total} file${total === 1 ? '' : 's'}.`;
+    batchFailures = nextFailures;
+    batchStatus.textContent = formatBatchFinishMessage(total - nextFailures.length, nextFailures);
     updateBatchPanel();
+}
+
+function runBatchDownload() {
+    clearBatchFailures();
+    return runBatchQueue(queueFromSelections());
+}
+
+function retryFailedDownloads() {
+    return runBatchQueue(batchFailures.map(({ img, name }) => ({ img, name })));
 }
 
 batchToggle.addEventListener('click', () => {
@@ -357,6 +418,7 @@ batchToggle.addEventListener('click', () => {
 
 batchFilenames.addEventListener('input', () => {
     persistBatchKeywords();
+    clearBatchFailures();
     updateBatchPanel();
 });
 
@@ -370,6 +432,7 @@ batchModeInput.addEventListener('change', () => {
 
 batchClearBtn.addEventListener('click', clearBatchSelection);
 batchDownloadBtn.addEventListener('click', runBatchDownload);
+batchRetryBtn.addEventListener('click', retryFailedDownloads);
 
 searchForm.addEventListener('submit', (e) => {
     e.preventDefault();

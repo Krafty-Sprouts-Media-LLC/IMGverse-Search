@@ -5,6 +5,11 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.34] - 05/09/2026
+
+### Fixed
+- Batch download names each failed file in the panel (with the server error) and adds **Retry failed** so you can re-download only those images instead of hunting the console
+
 ## [1.0.33] - 01/09/2026
 
 ### Added

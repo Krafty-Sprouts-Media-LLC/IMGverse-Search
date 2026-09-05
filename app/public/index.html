@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css?v=1.0.33">
+    <link rel="stylesheet" href="/style.css?v=1.0.34">
 </head>
 <body>
 
@@ -93,8 +93,10 @@
             <div class="batch-panel__actions">
                 <button type="button" id="batch-clear" class="batch-btn batch-btn--secondary" disabled>Clear selection</button>
                 <button type="button" id="batch-download" class="batch-btn batch-btn--primary" disabled>Download queue</button>
+                <button type="button" id="batch-retry" class="batch-btn batch-btn--secondary hidden" disabled>Retry failed</button>
             </div>
             <p id="batch-status" class="batch-status" aria-live="polite"></p>
+            <ul id="batch-failures" class="batch-failures hidden" aria-live="polite"></ul>
         </div>
     </aside>
 
@@ -123,6 +125,6 @@
         </nav>
     </main>
 
-    <script type="module" src="/app.js?v=1.0.33"></script>
+    <script type="module" src="/app.js?v=1.0.34"></script>
 </body>
 </html>
