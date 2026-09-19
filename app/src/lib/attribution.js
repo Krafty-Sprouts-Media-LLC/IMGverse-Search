@@ -2,8 +2,8 @@
 // lib/attribution.js
 // IMGverse Search — Build attribution captions and embed IPTC Caption on downloads.
 //
-// Caption format (IPTC Caption-Abstract only — no Description field):
-//   Photo by {credit} on {Provider} — {license} — {sourceUrl}
+// Caption format (IPTC Caption-Abstract only — no Description, no URL, no license dump):
+//   Photo by {credit} / {Provider}
 //
 // @package IMGverse-Search
 // @since   1.0.27
@@ -42,43 +42,33 @@ export function formatProviderName(provider) {
 
 /**
  * Build a single-line attribution string for IPTC Caption-Abstract.
+ * Matches IMGVerse WordPress: Photo by {creator} / {source}.
+ * Never includes a photo URL or license dump — WordPress copies IPTC Caption
+ * into the attachment caption / figcaption.
  *
  * @param {object} fields
  * @param {string} [fields.credit]
  * @param {string} [fields.provider]
- * @param {string} [fields.license]
- * @param {string} [fields.sourceUrl]
  * @returns {string}
  */
 export function buildAttributionCaption({
   credit = '',
   provider = '',
-  license = '',
-  sourceUrl = '',
 } = {}) {
   const providerLabel = formatProviderName(provider);
   const author = String(credit || '').trim();
-  const lic = String(license || '').trim();
-  const source = String(sourceUrl || '').trim();
 
-  let caption = '';
-
+  if (author && providerLabel) {
+    return `Photo by ${author} / ${providerLabel}`;
+  }
   if (author) {
-    caption = `Photo by ${author}`;
-    if (providerLabel) caption += ` on ${providerLabel}`;
-  } else if (providerLabel) {
-    caption = `Image from ${providerLabel}`;
+    return `Photo by ${author}`;
+  }
+  if (providerLabel) {
+    return `Image from ${providerLabel}`;
   }
 
-  if (lic) {
-    caption = caption ? `${caption} — ${lic}` : lic;
-  }
-
-  if (source) {
-    caption = caption ? `${caption} — ${source}` : source;
-  }
-
-  return caption.trim();
+  return '';
 }
 
 /**

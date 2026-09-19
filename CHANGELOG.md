@@ -5,6 +5,11 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.35] - 19/09/2026
+
+### Changed
+- Batch IPTC Caption is now **`Photo by {name} / {Provider}`** — no photo URL and no license dump, so WordPress does not paste `https://unsplash.com/photos/...` into figcaptions
+
 ## [1.0.34] - 05/09/2026
 
 ### Fixed
