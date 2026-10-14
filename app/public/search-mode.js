@@ -161,6 +161,14 @@ function loadBatchState() {
 
     const saved = storageGetJSON(BATCH_SELECTIONS_KEY, []);
     batchSelections = Array.isArray(saved) ? saved : [];
+
+    // Restore the term the queue belongs to, so re-running it after a reload
+    // is not treated as a new search (which would clear the queue).
+    const savedQuery = storageGet(BATCH_QUERY_KEY);
+    if (savedQuery && batchSelections.length) {
+        currentQuery = savedQuery;
+        searchInput.value = savedQuery;
+    }
     updateBatchPanel();
 }
 
@@ -452,7 +460,9 @@ function goToPage(page) {
 }
 
 async function fetchPage() {
-    if (isLoading || !currentQuery) return;
+    // No isLoading guard: a newer search (filter/page change mid-load) must
+    // run; the searchToken check below discards the older response.
+    if (!currentQuery) return;
 
     const token = searchToken;
     isLoading   = true;
@@ -492,8 +502,11 @@ async function fetchPage() {
         console.error('[IMGverse]', err.message);
         if (currentPage === 1) showEmptyState();
     } finally {
-        isLoading = false;
-        loader.classList.add('hidden');
+        // Only the newest request may end the loading state.
+        if (token === searchToken) {
+            isLoading = false;
+            loader.classList.add('hidden');
+        }
     }
 }
 

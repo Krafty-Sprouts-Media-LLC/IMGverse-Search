@@ -61,8 +61,8 @@ Source of truth for each item is listed so nothing is ported from memory.
 
 Found during the v2.0.0 Part 2 browser check (present on master too; code moved unchanged):
 
-- [ ] Clicking a provider/orientation pill (or paging) while a search is still loading leaves the grid empty: `fetchPage()` returns early on `isLoading`, then the in-flight result is discarded as stale by `searchToken`. Fix: let the newer request run and drop the older one (token check only), instead of the `isLoading` early return.
-- [ ] After a reload, re-running the same search term wipes the restored batch queue: `BATCH_QUERY_KEY` is written but never read, so `currentQuery` is `''` and `startNewSearch` treats the term as new. Fix: restore `currentQuery` (and the search box) from `BATCH_QUERY_KEY` in `loadBatchState()`, or compare against the stored query.
+- [x] Clicking a provider/orientation pill (or paging) while a search is still loading leaves the grid empty: `fetchPage()` returns early on `isLoading`, then the in-flight result is discarded as stale by `searchToken`. Fix: let the newer request run and drop the older one (token check only), instead of the `isLoading` early return.
+- [x] After a reload, re-running the same search term wipes the restored batch queue: `BATCH_QUERY_KEY` is written but never read, so `currentQuery` is `''` and `startNewSearch` treats the term as new. Fix: restore `currentQuery` (and the search box) from `BATCH_QUERY_KEY` in `loadBatchState()`, or compare against the stored query.
 
 Found earlier:
 
