@@ -9,7 +9,7 @@
 
 'use strict';
 
-import { LOOKAHEAD, MAX_KEYWORDS, createBulkQueue } from './bulk-queue.js?v=2.0.0';
+import { LOOKAHEAD, MAX_KEYWORDS, createBulkQueue } from './bulk-queue.js?v=2.0.2';
 import { searchSources } from './search-client.js?v=2.0.0';
 import { isSmall, shapeOf } from './image-shape.js?v=2.0.0';
 import { downloadImage, runDownloadQueue } from './download-queue.js?v=2.0.0';
@@ -40,6 +40,9 @@ const els = {
     dlStatus:  $('bulk-dl-status'),
     dlFails:   $('bulk-dl-failures'),
     retry:     $('bulk-retry'),
+    redownload: $('bulk-redownload'),
+    summary:   $('bulk-summary'),
+    showMissing: $('bulk-show-missing'),
 };
 
 /* ------------------------------------------------------------------ state */
@@ -132,6 +135,7 @@ function needsReview(row) {
 function visible(row) {
     if (filter === 'review') return needsReview(row);
     if (filter === 'picked') return !row.skipped && row.pick != null;
+    if (filter === 'notselected') return !row.skipped && row.pick == null;
     if (filter === 'skipped') return row.skipped;
     return true;
 }
@@ -162,7 +166,11 @@ function statusHtml(row) {
         ? `<span class="status status--warn" title="Paused for a rate limit; images are added automatically when it resumes">waiting on ${esc(row.pending.map((p) => NAMES[p] || p).join(', '))}</span>`
         : '';
     if (row.state === 'empty') return `${row.pending.length ? '' : '<span class="status status--warn">No results</span>'}${pending}`;
-    return `<span class="status status--ok">${row.images.length} results</span>${pending}`;
+    const i = queue.rows.indexOf(row);
+    const choice = row.pick == null
+        ? '<span class="status status--idle">No image selected</span>'
+        : (queue.isDownloaded(i) ? '<span class="status status--done">Downloaded</span>' : '');
+    return `<span class="status status--ok">${row.images.length} results</span>${choice}${pending}`;
 }
 
 function stripHtml(row, i) {
@@ -233,7 +241,7 @@ function focusSelector(el) {
 
 function signature(row, i) {
     return [row.state, row.query, row.pick, row.images.length, row.skipped, row.pending.join(','), row.error,
-        i === active, queue.inWindow(i), shownFor(i, row)].join('|');
+        i === active, queue.inWindow(i), shownFor(i, row), queue.isDownloaded(i)].join('|');
 }
 
 function renderRows() {
@@ -282,8 +290,17 @@ function renderMeta() {
     $('bulk-n-review').textContent = c.review;
     $('bulk-n-picked').textContent = c.picked;
     $('bulk-n-skipped').textContent = c.skipped;
-    els.download.textContent = downloading ? 'Downloading…' : `Download ${c.picked}`;
-    els.download.disabled = downloading || !c.picked;
+    $('bulk-n-notselected').textContent = c.notSelected;
+    // "Download 5 new" once some files are saved; re-downloading everything is a separate button.
+    els.download.textContent = downloading ? 'Downloading…'
+        : (c.downloaded ? `Download ${c.toDownload} new` : `Download ${c.toDownload}`);
+    els.download.disabled = downloading || !c.toDownload;
+    els.redownload.classList.toggle('hidden', !c.downloaded);
+    els.redownload.disabled = downloading;
+    els.redownload.textContent = `Re-download all ${c.picked}`;
+    els.summary.textContent = c.all
+        ? `${c.picked} of ${c.all - c.skipped} selected${c.downloaded ? ` · ${c.downloaded} downloaded` : ''}`
+        : '';
     els.bar.style.width = c.all ? `${Math.round((c.done / c.all) * 100)}%` : '0';
     els.progress.textContent = !c.all ? 'Nothing searched yet.' : `${c.done} of ${c.all} searched.`;
     renderRunbar(c);
@@ -516,6 +533,12 @@ function updateKeywordCount() {
     els.run.disabled = !n;
 }
 
+function setFilter(name) {
+    filter = name;
+    document.querySelectorAll('#bulk-filter button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.filter === name)));
+    scheduleRender();
+}
+
 /* ----------------------------------------------------------- downloads */
 
 function renderFailures() {
@@ -535,12 +558,22 @@ async function runDownloads(list) {
     downloading = true;
     renderMeta();
     const total = list.length;
-    failures = await runDownloadQueue(list, {
+    const failed = await runDownloadQueue(list, {
         download:   (img, name) => downloadImage(img, name, size),
         onProgress: ({ index, name }) => { els.dlStatus.textContent = `Downloading ${index + 1} of ${total}: ${name}`; },
     });
+
+    // Keywords are unique per run, so the name identifies the row.
+    const byName = new Map(list.map((item) => [item.name, item]));
+    const failedNames = new Set(failed.map((f) => f.name));
+    list.forEach((item) => { if (!failedNames.has(item.name)) queue.markDownloaded(item.row, item.img); });
+    failures = failed.map((f) => ({ ...f, row: byName.get(f.name)?.row }));
+
     downloading = false;
-    els.dlStatus.textContent = formatBatchFinishMessage(total - failures.length, failures);
+    const missing = queue.counts().notSelected;
+    els.dlStatus.textContent = formatBatchFinishMessage(total - failures.length, failures)
+        + (missing ? ` ${missing} keyword${missing === 1 ? ' has' : 's have'} no image selected.` : '');
+    els.showMissing.classList.toggle('hidden', !missing);
     renderFailures();
     renderMeta();
 }
@@ -583,11 +616,7 @@ export function initBulkMode() {
         persist();
     }));
 
-    document.querySelectorAll('#bulk-filter button').forEach((b) => b.addEventListener('click', () => {
-        filter = b.dataset.filter;
-        document.querySelectorAll('#bulk-filter button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-        scheduleRender();
-    }));
+    document.querySelectorAll('#bulk-filter button').forEach((b) => b.addEventListener('click', () => setFilter(b.dataset.filter)));
 
     els.pause.addEventListener('click', () => (queue.paused ? queue.resume() : queue.pause()));
     els.download.addEventListener('click', () => {
@@ -595,7 +624,13 @@ export function initBulkMode() {
         renderFailures();
         runDownloads(queue.downloadList());
     });
-    els.retry.addEventListener('click', () => runDownloads(failures.map(({ img, name }) => ({ img, name }))));
+    els.redownload.addEventListener('click', () => {
+        failures = [];
+        renderFailures();
+        runDownloads(queue.downloadList({ onlyNew: false }));
+    });
+    els.retry.addEventListener('click', () => runDownloads(failures.map(({ img, name, row }) => ({ img, name, row }))));
+    els.showMissing.addEventListener('click', () => setFilter('notselected'));
 
     els.rows.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-act]');
@@ -642,6 +677,7 @@ export function initBulkMode() {
         else if (key === 'arrowright' && row?.pick != null) { e.preventDefault(); pick(active, Math.min(row.images.length - 1, row.pick + 1)); }
         else if (key === 'arrowleft' && row?.pick != null) { e.preventDefault(); pick(active, Math.max(0, row.pick - 1)); }
         else if (key === 's' && row) { queue.toggleSkip(active); }
+        else if (key === 'x' && row) { queue.clearPick(active); }
         else if (key === 'e' && row) {
             const input = els.rows.querySelector(`.krow[data-row="${active}"] .query input`);
             if (input) { e.preventDefault(); input.focus(); input.select(); }

@@ -35,6 +35,10 @@ function newRow(keyword) {
     error: '',
     edited: false,
     savedPickKey: null,
+    /** The user unselected this row's image; don't auto-pick it again until a fresh search. */
+    cleared: false,
+    /** imageKey of the image last downloaded for this row. */
+    downloadedKey: null,
     token: 0,
   };
 }
@@ -75,6 +79,7 @@ export function createBulkQueue({
   const inWindow = (i) => i <= readPos + LOOKAHEAD;
 
   function choosePick(row) {
+    if (row.cleared) return null;
     if (row.savedPickKey) {
       const i = row.images.findIndex((img) => imageKey(img) === row.savedPickKey);
       row.savedPickKey = null;
@@ -169,7 +174,7 @@ export function createBulkQueue({
       row.pending = row.pending.filter((p) => p !== provider);
       if (row.images.length) {
         row.state = 'done';
-        if (row.pick == null) row.pick = autoPick(row.images, orientation);
+        if (row.pick == null && !row.cleared) row.pick = autoPick(row.images, orientation);
       }
     } catch (err) {
       console.error(`[SISE/bulk] ${provider} top-up failed for`, JSON.stringify(row.query), err?.message || err);
@@ -196,13 +201,20 @@ export function createBulkQueue({
     }
   }
 
+  /** A fresh search: new results get a fresh auto-pick, even if the old pick was cleared. */
   function requeue(row) {
     row.token++;
     row.state = 'queued';
     row.images = [];
     row.pick = null;
+    row.cleared = false;
     row.pending = [];
     row.error = '';
+  }
+
+  function isDownloaded(row) {
+    return Boolean(row.downloadedKey) && row.pick != null && row.images[row.pick]
+      && imageKey(row.images[row.pick]) === row.downloadedKey;
   }
 
   function load(keywords, { orientation: o = '', saved = null } = {}) {
@@ -232,6 +244,8 @@ export function createBulkQueue({
         if (s.query) { row.query = s.query; row.edited = true; }
         row.savedPickKey = s.pickKey || null;
         row.skipped = Boolean(s.skipped);
+        row.cleared = Boolean(s.cleared);
+        row.downloadedKey = s.downloadedKey || null;
       });
     }
 
@@ -292,11 +306,41 @@ export function createBulkQueue({
       pump();
     },
 
+    /** Select image j; picking the selected image again unselects it. */
     pick(i, j) {
       const row = rows[i];
       if (!row || row.skipped || !row.images[j]) return;
-      row.pick = j;
+      if (row.pick === j) {
+        row.pick = null;
+        row.cleared = true;
+      } else {
+        row.pick = j;
+        row.cleared = false;
+      }
       onChange();
+    },
+
+    /** Leave this keyword without an image (it won't be downloaded). */
+    clearPick(i) {
+      const row = rows[i];
+      if (!row) return;
+      row.pick = null;
+      row.cleared = true;
+      onChange();
+    },
+
+    /** Record that `img` was saved for row i. */
+    markDownloaded(i, img) {
+      const row = rows[i];
+      if (!row || !img) return;
+      row.downloadedKey = imageKey(img);
+      onChange();
+    },
+
+    /** True when the row's current pick is the image already downloaded. */
+    isDownloaded(i) {
+      const row = rows[i];
+      return Boolean(row) && isDownloaded(row);
     },
 
     toggleSkip(i) {
@@ -326,14 +370,17 @@ export function createBulkQueue({
       let review = 0;
       let skipped = 0;
       let waiting = 0;
+      let downloaded = 0;
       for (const r of rows) {
         if (r.state !== 'queued' && r.state !== 'loading') done++;
         if (r.skipped) { skipped++; continue; }
         if (r.pick != null) picked++;
+        if (isDownloaded(r)) downloaded++;
         if (r.pending.length) waiting++;
         if (r.state === 'error' || (r.state === 'empty' && !r.pending.length)) review++;
       }
-      return { all: rows.length, done, picked, review, skipped, waiting };
+      const notSelected = rows.length - skipped - picked;
+      return { all: rows.length, done, picked, review, skipped, waiting, notSelected, downloaded, toDownload: picked - downloaded };
     },
 
     snapshot() {
@@ -345,14 +392,21 @@ export function createBulkQueue({
           query: r.edited ? r.query : undefined,
           pickKey: r.pick != null && r.images[r.pick] ? imageKey(r.images[r.pick]) : (r.savedPickKey || null),
           skipped: r.skipped,
+          cleared: r.cleared || undefined,
+          downloadedKey: r.downloadedKey || undefined,
         })),
       };
     },
 
-    downloadList() {
+    /**
+     * Picked, non-skipped rows to download, named after the keyword.
+     * By default only rows whose current pick hasn't been downloaded yet.
+     */
+    downloadList({ onlyNew = true } = {}) {
       return rows
-        .filter((r) => !r.skipped && r.pick != null && r.images[r.pick])
-        .map((r) => ({ img: r.images[r.pick], name: r.keyword }));
+        .map((r, row) => ({ r, row }))
+        .filter(({ r }) => !r.skipped && r.pick != null && r.images[r.pick] && !(onlyNew && isDownloaded(r)))
+        .map(({ r, row }) => ({ img: r.images[r.pick], name: r.keyword, row }));
     },
   };
 }

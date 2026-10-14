@@ -12,7 +12,7 @@
 import { migrateKeys } from './safe-storage.js?v=2.0.0';
 import { initShell } from './shell.js?v=2.0.0';
 import { initSearchMode } from './search-mode.js?v=2.0.0';
-import { initBulkMode } from './bulk-mode.js?v=2.0.0';
+import { initBulkMode } from './bulk-mode.js?v=2.0.2';
 
 // Saved batches, Opened marks and bulk runs from IMGverse Search carry over.
 migrateKeys('imgverse:', 'sise:');
