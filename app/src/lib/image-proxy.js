@@ -13,6 +13,11 @@ import fetch from 'node-fetch';
 import sharp from 'sharp';
 import { embedAttributionInJpeg } from './attribution.js';
 
+// Each image is processed once, so the libvips cache never helps. Left on, it
+// kept ~70 MB of native memory per download, and the 512 MB app container
+// was OOM-killed after a few large images (nginx then returned 502).
+sharp.cache(false);
+
 export const ALLOWED_DOMAINS = new Set([
   'images.unsplash.com',
   'plus.unsplash.com',

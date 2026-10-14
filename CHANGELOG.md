@@ -5,6 +5,22 @@ All notable changes to SISE (formerly IMGverse Search) will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 14/10/2026
+
+### Added
+- **Bulk keywords: unselect an image.** Click the selected image again (or press `X`) to leave a keyword without an image; it won't be downloaded. Late results from a paused provider don't re-select it, and it stays unselected after a reload. (#6)
+- **Bulk keywords: clear counts.** "15 of 20 selected · 3 downloaded" next to the Download button, and a **Not selected** filter. (#6)
+- **Bulk keywords: downloads are tracked.** Each saved row shows **Downloaded** (kept across reloads); the button becomes **Download N new** so earlier files aren't saved twice (a separate **Re-download all** is there if you want it); changing a downloaded row's image makes it new again. The finish message says how many keywords have no image, with a button to show them. (#7)
+- **Bulk keywords: which provider and what the image is.** Every thumbnail shows its provider, hovering shows the provider's title, photographer and size, and each row shows the selected image as *Selected: "Title" · Photographer · Provider*. (#2, #3)
+- **Bulk keywords: large preview.** **Preview** on a row, double-click a thumbnail, or press `Space`: the image large (Openverse uses its full file), with title, photographer, provider, size and shape; `←` `→` browse, `Enter` selects / unselects, `Esc` closes. (#4)
+
+### Fixed
+- **Downloads no longer fail with "502 Bad Gateway" after a few images.** The image library kept about 70 MB of memory after every download, so the app was killed for running out of memory after 3–4 large images and nginx showed its own 502 page for the next keywords while it restarted. Its cache is now off (each image is only processed once, so it never helped); 16 downloads in a row now stay at about 80 MB between images. (#9)
+- Bulk keywords: `←` `→` now scroll the thumbnail strip so the selected image stays in view, revealing more images when you move past the last one, and never unselect at either end. (#5)
+
+### Changed
+- README: `/healthz` answers `healthy`; the environment table lists every optional setting (download size and quality, rate-limit overrides, `SISE_VERSION`) and which old variables are unused.
+
 ## [2.0.1] - 14/10/2026
 
 ### Fixed

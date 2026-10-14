@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css?v=2.0.0">
+    <link rel="stylesheet" href="/style.css?v=2.0.2">
 </head>
 <body>
 
@@ -169,11 +169,16 @@
                 <div class="seg seg--inline" id="bulk-filter" role="group" aria-label="Filter rows">
                     <button type="button" data-filter="all" aria-pressed="true">All<span class="seg__n" id="bulk-n-all">0</span></button>
                     <button type="button" data-filter="review" aria-pressed="false">Needs review<span class="seg__n" id="bulk-n-review">0</span></button>
-                    <button type="button" data-filter="picked" aria-pressed="false">Picked<span class="seg__n" id="bulk-n-picked">0</span></button>
+                    <button type="button" data-filter="picked" aria-pressed="false">Selected<span class="seg__n" id="bulk-n-picked">0</span></button>
+                    <button type="button" data-filter="notselected" aria-pressed="false">Not selected<span class="seg__n" id="bulk-n-notselected">0</span></button>
                     <button type="button" data-filter="skipped" aria-pressed="false">Skipped<span class="seg__n" id="bulk-n-skipped">0</span></button>
                 </div>
-                <div class="keys" aria-hidden="true"><span><kbd>J</kbd> <kbd>K</kbd> row</span><span><kbd>1</kbd>–<kbd>9</kbd> pick</span><span><kbd>←</kbd> <kbd>→</kbd> change</span><span><kbd>S</kbd> skip</span><span><kbd>E</kbd> edit</span></div>
-                <button type="button" id="bulk-download" class="btn btn-primary" disabled>Download 0</button>
+                <div class="keys" aria-hidden="true"><span><kbd>J</kbd> <kbd>K</kbd> row</span><span><kbd>1</kbd>–<kbd>9</kbd> select / unselect</span><span><kbd>←</kbd> <kbd>→</kbd> move</span><span><kbd>Space</kbd> preview</span><span><kbd>X</kbd> unselect</span><span><kbd>S</kbd> skip</span><span><kbd>E</kbd> edit</span></div>
+                <div class="bulk-actions">
+                    <span class="bulk-summary" id="bulk-summary" aria-live="polite"></span>
+                    <button type="button" id="bulk-redownload" class="btn btn-secondary hidden">Re-download all</button>
+                    <button type="button" id="bulk-download" class="btn btn-primary" disabled>Download 0</button>
+                </div>
 
                 <div class="runbar">
                     <span class="runbar__state"><span class="pulse pulse--idle" id="bulk-run-pulse" aria-hidden="true"></span><span id="bulk-run-state" aria-live="polite">Idle</span></span>
@@ -183,6 +188,7 @@
                 </div>
                 <div class="bulk-dl">
                     <p id="bulk-dl-status" class="batch-status" aria-live="polite"></p>
+                    <button type="button" id="bulk-show-missing" class="btn btn-secondary btn-sm hidden">Show keywords without an image</button>
                     <ul id="bulk-dl-failures" class="batch-failures hidden"></ul>
                     <button type="button" id="bulk-retry" class="btn btn-secondary btn-sm hidden">Retry failed</button>
                 </div>
@@ -195,7 +201,7 @@
                 <p>Paste your keyword list on the left and press <strong>Search keywords</strong>.</p>
                 <ol class="steps">
                     <li>Every keyword gets its own row with its own results.</li>
-                    <li>The best match is picked for you. Click another image to swap it.</li>
+                    <li>The best match is selected for you. Click another image to swap it, or click the selected one again to leave that keyword without an image.</li>
                     <li>Rows with no results land in <strong>Needs review</strong>: edit the query and search again.</li>
                     <li>Download saves one file per picked row, named like <span class="mono">what to serve with tri tip.jpg</span>.</li>
                 </ol>
@@ -203,6 +209,28 @@
         </div>
     </div>
 
-    <script type="module" src="/app.js?v=2.0.0"></script>
+    <!-- Bulk keywords: large image preview -->
+    <dialog id="bulk-preview" class="preview" tabindex="-1" aria-labelledby="preview-keyword preview-title">
+        <div class="preview__head">
+            <p class="preview__keyword" id="preview-keyword"></p>
+            <button type="button" class="btn btn-ghost btn-sm" id="preview-close">Close</button>
+        </div>
+        <div class="preview__stage">
+            <button type="button" class="preview__nav" id="preview-prev" aria-label="Previous image">&#8249;</button>
+            <img id="preview-img" alt="" referrerpolicy="no-referrer">
+            <button type="button" class="preview__nav" id="preview-next" aria-label="Next image">&#8250;</button>
+        </div>
+        <div class="preview__info">
+            <h2 id="preview-title"></h2>
+            <p class="preview__meta" id="preview-meta"></p>
+            <div class="preview__actions">
+                <button type="button" class="btn btn-primary" id="preview-select" aria-pressed="false">Select this image</button>
+                <a class="btn btn-secondary" id="preview-source" target="_blank" rel="noopener">View on provider</a>
+            </div>
+            <p class="hint"><kbd>←</kbd> <kbd>→</kbd> browse · <kbd>Enter</kbd> select / unselect · <kbd>Esc</kbd> close</p>
+        </div>
+    </dialog>
+
+    <script type="module" src="/app.js?v=2.0.2"></script>
 </body>
 </html>

@@ -69,7 +69,9 @@ describe('bulk queue', () => {
     await settle();
     assert.equal(q.rows[0].pick, 1);
     assert.equal(q.rows[1].state, 'empty');
-    assert.deepEqual(q.counts(), { all: 2, done: 2, picked: 1, review: 1, skipped: 0, waiting: 0 });
+    assert.deepEqual(q.counts(), {
+      all: 2, done: 2, picked: 1, review: 1, skipped: 0, waiting: 0, notSelected: 1, downloaded: 0, toDownload: 1,
+    });
   });
 
   it('re-searches one edited row and replaces its pick', async () => {
@@ -97,7 +99,7 @@ describe('bulk queue', () => {
     assert.equal(q.rows[0].state, 'done');
     assert.equal(q.counts().waiting, 2);
     assert.equal(q.counts().review, 0);
-    q.pick(0, 0);
+    assert.equal(q.rows[0].pick, 0);
     await advance(OPENVERSE_BACKOFF_MS);
     assert.ok(calls.some((c) => c.providers?.[0] === 'openverse'));
     assert.deepEqual(q.rows[0].pending, []);
@@ -278,6 +280,129 @@ describe('bulk queue', () => {
     q.dropPending('pexels');
     assert.deepEqual(q.rows[0].pending, []);
     assert.equal(q.counts().review, 1);
+  });
+
+  it('unselects when the selected image is picked again, and can clear a pick', async () => {
+    const { q } = harness();
+    q.load(words(2), { orientation: '' });
+    await settle();
+    assert.equal(q.rows[0].pick, 0);
+    q.pick(0, 0);
+    assert.equal(q.rows[0].pick, null);
+    assert.equal(q.rows[0].state, 'done');
+    assert.equal(q.counts().review, 0);
+    assert.equal(q.counts().notSelected, 1);
+    q.pick(0, 1);
+    assert.equal(q.rows[0].pick, 1);
+    q.clearPick(1);
+    assert.equal(q.rows[1].pick, null);
+    assert.deepEqual(q.downloadList().map((d) => d.name), ['what to serve with dish0']);
+  });
+
+  it('ignores clearPick on skipped rows and on rows still searching', async () => {
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const q = createBulkQueue({
+      search: async ({ query }) => {
+        if (query === 'dish1') await gate;
+        return { results: [img(`${query}-1`)], providerStatus: {} };
+      },
+    });
+    q.load(words(2), { orientation: '' });
+    await settle();
+    q.toggleSkip(0);
+    q.clearPick(0);
+    q.toggleSkip(0);
+    assert.equal(q.rows[0].pick, 0);
+    q.clearPick(1);
+    release();
+    await settle();
+    assert.equal(q.rows[1].pick, 0);
+  });
+
+  it('counts only finished rows as not selected', async () => {
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const q = createBulkQueue({
+      search: async ({ query }) => {
+        if (query === 'dish1') await gate;
+        return { results: query === 'dish0' ? [] : [img(`${query}-1`)], providerStatus: {} };
+      },
+    });
+    q.load(words(2), { orientation: '' });
+    await settle();
+    assert.equal(q.counts().notSelected, 1);
+    release();
+    await settle();
+    assert.equal(q.counts().notSelected, 1);
+  });
+
+  it('keeps an unselected row empty when a late top-up adds images', async () => {
+    const { q, advance } = harness({
+      results: (query, providers) => (providers ? [img(`${query}-ov`)] : [img(`${query}-1`)]),
+      status: (query, providers) => (providers ? { openverse: { status: 'ok' } } : { openverse: { status: 'paused' } }),
+    });
+    q.load(words(1), { orientation: '' });
+    await settle();
+    q.clearPick(0);
+    await advance(OPENVERSE_BACKOFF_MS);
+    assert.equal(q.rows[0].images.length, 2);
+    assert.equal(q.rows[0].pick, null);
+  });
+
+  it('remembers an unselected row across a reload', async () => {
+    const { q } = harness();
+    q.load(words(1), { orientation: '' });
+    await settle();
+    q.clearPick(0);
+    const saved = JSON.parse(JSON.stringify(q.snapshot()));
+    const again = harness();
+    again.q.load(saved.keywords, { orientation: '', saved });
+    await settle();
+    assert.equal(again.q.rows[0].pick, null);
+  });
+
+  it('auto-picks again when an unselected row is searched afresh', async () => {
+    const { q } = harness();
+    q.load(words(1), { orientation: '' });
+    await settle();
+    q.clearPick(0);
+    q.setQuery(0, 'lamb shank');
+    await settle();
+    assert.equal(q.rows[0].pick, 0);
+  });
+
+  it('tracks downloaded rows and offers only new picks next time', async () => {
+    const { q } = harness();
+    q.load(words(3), { orientation: '' });
+    await settle();
+    const first = q.downloadList();
+    assert.equal(first.length, 3);
+    first.slice(0, 2).forEach((d) => q.markDownloaded(d.row, d.img));
+    assert.equal(q.isDownloaded(0), true);
+    assert.deepEqual(q.downloadList().map((d) => d.row), [2]);
+    assert.equal(q.downloadList({ onlyNew: false }).length, 3);
+    assert.deepEqual(
+      [q.counts().downloaded, q.counts().toDownload, q.counts().picked],
+      [2, 1, 3],
+    );
+    q.pick(1, 1);
+    assert.equal(q.isDownloaded(1), false);
+    assert.deepEqual(q.downloadList().map((d) => d.row), [1, 2]);
+  });
+
+  it('remembers downloads across a reload', async () => {
+    const { q } = harness();
+    q.load(words(2), { orientation: '' });
+    await settle();
+    const [d] = q.downloadList();
+    q.markDownloaded(d.row, d.img);
+    const saved = JSON.parse(JSON.stringify(q.snapshot()));
+    const again = harness();
+    again.q.load(saved.keywords, { orientation: '', saved });
+    await settle();
+    assert.equal(again.q.isDownloaded(0), true);
+    assert.deepEqual(again.q.downloadList().map((x) => x.row), [1]);
   });
 
   it('dedupes and caps the keyword list', () => {
