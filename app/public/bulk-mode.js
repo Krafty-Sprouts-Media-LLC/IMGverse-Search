@@ -15,11 +15,11 @@ import { isSmall, shapeOf } from './image-shape.js?v=2.0.0';
 import { downloadImage, runDownloadQueue } from './download-queue.js?v=2.0.0';
 import { formatBatchFailureLine, formatBatchFinishMessage } from './batch-helpers.js?v=1.0.34';
 import { storageGetJSON, storageSet } from './safe-storage.js?v=2.0.0';
+import { describeImage, imageTitle, providerName } from './image-meta.js?v=2.0.2';
 
 const STORAGE_KEY = 'sise:bulk';
 const PER_ROW = 6;
 const STATUS_POLL_MS = 15_000;
-const NAMES = { openverse: 'Openverse', unsplash: 'Unsplash', pexels: 'Pexels', pixabay: 'Pixabay', inaturalist: 'iNaturalist' };
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -43,6 +43,15 @@ const els = {
     redownload: $('bulk-redownload'),
     summary:   $('bulk-summary'),
     showMissing: $('bulk-show-missing'),
+    preview:   $('bulk-preview'),
+    pvKeyword: $('preview-keyword'),
+    pvImg:     $('preview-img'),
+    pvTitle:   $('preview-title'),
+    pvMeta:    $('preview-meta'),
+    pvSelect:  $('preview-select'),
+    pvSource:  $('preview-source'),
+    pvPrev:    $('preview-prev'),
+    pvNext:    $('preview-next'),
 };
 
 /* ------------------------------------------------------------------ state */
@@ -163,7 +172,7 @@ function statusHtml(row) {
     if (row.state === 'loading') return '<span class="status status--idle">Searching…</span>';
     if (row.state === 'error') return `<span class="status status--warn">${esc(row.error)}</span>`;
     const pending = row.pending.length
-        ? `<span class="status status--warn" title="Paused for a rate limit; images are added automatically when it resumes">waiting on ${esc(row.pending.map((p) => NAMES[p] || p).join(', '))}</span>`
+        ? `<span class="status status--warn" title="Paused for a rate limit; images are added automatically when it resumes">waiting on ${esc(row.pending.map(providerName).join(', '))}</span>`
         : '';
     if (row.state === 'empty') return `${row.pending.length ? '' : '<span class="status status--warn">No results</span>'}${pending}`;
     const i = queue.rows.indexOf(row);
@@ -195,9 +204,12 @@ function stripHtml(row, i) {
         const ratio = img.width && img.height ? img.width / img.height : 4 / 3;
         const width = Math.round(116 * Math.min(1.9, Math.max(0.6, ratio)));
         const dims = img.width ? `${img.width}×${img.height}` : 'size ?';
+        const about = describeImage(img);
         return `<button type="button" class="thumb" style="width:${width}px" data-act="pick" data-row="${i}" data-img="${j}"
-                    aria-pressed="${row.pick === j}" aria-label="Use image ${j + 1}${img.alt ? `: ${esc(img.alt)}` : ''}, ${esc(dims)}">
+                    aria-pressed="${row.pick === j}" aria-label="Image ${j + 1}: ${esc(about)}, ${esc(dims)}"
+                    title="${esc(about)} · ${esc(dims)}&#10;Click to select · double-click to preview">
                     <img src="${esc(img.thumb)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                    <span class="thumb__prov">${esc(providerName(img.provider))}</span>
                     <span class="thumb__check">${ICON_CHECK}</span>
                     ${j < 9 ? `<span class="thumb__n">${j + 1}</span>` : ''}
                     <span class="thumb__dims${isSmall(img) ? ' thumb__dims--small' : ''}">${shape ? `<span class="shape-ico shape-ico--${shape}" aria-hidden="true"></span>` : ''}${esc(dims)}</span>
@@ -207,6 +219,13 @@ function stripHtml(row, i) {
         ? `<button type="button" class="thumb thumb--more" data-act="more" data-row="${i}">+${Math.min(PER_ROW, row.images.length - count)} more</button>`
         : '';
     return `<div class="strip">${thumbs}${more}</div>`;
+}
+
+/** "Selected: “Title” · Photographer · Provider" for the row's chosen image. */
+function selectedLine(row) {
+    const img = row.pick != null ? row.images[row.pick] : null;
+    if (!img || row.skipped) return '';
+    return `<p class="krow__selected"><span class="krow__selected-label">Selected:</span> ${esc(describeImage(img))}</p>`;
 }
 
 function rowHtml(row, i) {
@@ -225,8 +244,12 @@ function rowHtml(row, i) {
                     ${statusHtml(row)}
                     <span class="fname" title="${esc(row.keyword)}.jpg">${esc(row.keyword)}.jpg</span>
                 </div>
+                ${selectedLine(row)}
             </div>
-            <button type="button" class="btn btn-ghost btn-sm" data-act="skip" data-row="${i}">${row.skipped ? 'Restore' : 'Skip'}</button>
+            <div class="krow__actions">
+                ${row.images.length && !row.skipped ? `<button type="button" class="btn btn-ghost btn-sm" data-act="preview" data-row="${i}">Preview</button>` : ''}
+                <button type="button" class="btn btn-ghost btn-sm" data-act="skip" data-row="${i}">${row.skipped ? 'Restore' : 'Skip'}</button>
+            </div>
         </div>
         ${row.skipped ? '' : stripHtml(row, i)}
     </article>`;
@@ -332,7 +355,7 @@ function renderRunbar(c = queue.counts()) {
     const t = Date.now();
     for (const [name, b] of Object.entries(budgets)) {
         if (b.status === 'paused' && b.resumeAt) {
-            notes.push(`${NAMES[name] || name} limit reached, back in ${clock(Date.parse(b.resumeAt) - t)}`);
+            notes.push(`${providerName(name)} limit reached, back in ${clock(Date.parse(b.resumeAt) - t)}`);
         }
     }
     if (queue.openverseResumeAt) notes.push(`Openverse asked us to slow down, retrying in ${clock(queue.openverseResumeAt - t)}`);
@@ -369,7 +392,7 @@ function renderProviders() {
         els.providers.innerHTML = names.map((name) => {
             const on = name === 'openverse' ? enabled.has('openverse') : !disabledByUser.has(name);
             return `<div class="pstat" data-provider="${esc(name)}">
-                <label class="pstat__name"><input type="checkbox" data-provider="${esc(name)}" ${on ? 'checked' : ''}> ${esc(NAMES[name] || name)}</label>
+                <label class="pstat__name"><input type="checkbox" data-provider="${esc(name)}" ${on ? 'checked' : ''}> ${esc(providerName(name))}</label>
                 <span class="pstat__left"></span>
                 <div class="meter" aria-hidden="true"><span></span></div>
                 <span class="pstat__sub"></span>
@@ -385,10 +408,23 @@ function renderProviders() {
     }
 }
 
+/** Row whose strip should scroll its selected (or focused) image into view after the next render. */
+let scrollStripFor = null;
+let scrollStripImg = null;
+
 function render() {
     renderRows();
     renderMeta();
     persist();
+    if (els.preview.open) renderPreview();
+    if (scrollStripFor != null) {
+        const sel = scrollStripImg != null
+            ? `.krow[data-row="${scrollStripFor}"] .thumb[data-img="${scrollStripImg}"]`
+            : `.krow[data-row="${scrollStripFor}"] .thumb[aria-pressed="true"]`;
+        els.rows.querySelector(sel)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        scrollStripFor = null;
+        scrollStripImg = null;
+    }
 }
 
 /* ----------------------------------------------------------- persistence */
@@ -495,10 +531,19 @@ function firstVisibleRow() {
     return el ? Number(el.dataset.row) : 0;
 }
 
-function pick(i, j) {
+/** Make image j visible in row i's strip (revealing "+N more" if needed). */
+function revealImage(i, j) {
     const row = queue.rows[i];
     if (!row || !row.images[j]) return;
     if (j >= shownFor(i, row)) shown.set(i, Math.ceil((j + 1) / PER_ROW) * PER_ROW);
+    scrollStripFor = i;
+    scrollStripImg = j;
+}
+
+function pick(i, j) {
+    const row = queue.rows[i];
+    if (!row || !row.images[j]) return;
+    revealImage(i, j);
     queue.pick(i, j);
     active = i;
 }
@@ -531,6 +576,85 @@ function updateKeywordCount() {
     els.kwCount.textContent = n > MAX_KEYWORDS ? `${n} (first ${MAX_KEYWORDS.toLocaleString()} used)` : String(n);
     els.run.textContent = n ? `Search ${Math.min(n, MAX_KEYWORDS)} keyword${n === 1 ? '' : 's'}` : 'Search keywords';
     els.run.disabled = !n;
+}
+
+/* ----------------------------------------------------------- preview */
+
+/** Which keyword row and image the preview shows. */
+const pv = { row: null, img: null };
+/** First click of a possible double-click on a thumbnail: { i, j, t, before }. */
+let lastPickClick = null;
+
+function openPreview(i, j) {
+    const row = queue.rows[i];
+    if (!row?.images[j]) return;
+    pv.row = i;
+    pv.img = j;
+    active = i;
+    renderPreview();
+    if (!els.preview.open) els.preview.showModal();
+}
+
+function renderPreview() {
+    const row = queue.rows[pv.row];
+    const img = row?.images[pv.img];
+    if (!img) { if (els.preview.open) els.preview.close(); return; }
+
+    // Openverse thumbnails are small; use its full file and fall back to the thumbnail.
+    const big = img.provider === 'openverse' && img.full ? img.full : img.thumb;
+    if (els.pvImg.dataset.src !== big) {
+        els.pvImg.dataset.src = big;
+        els.pvImg.onerror = () => { if (els.pvImg.src !== img.thumb) els.pvImg.src = img.thumb; };
+        els.pvImg.src = big;
+    }
+    els.pvImg.alt = imageTitle(img) || `Image ${pv.img + 1} for ${row.keyword}`;
+
+    els.pvKeyword.textContent = row.keyword;
+    els.pvTitle.textContent = imageTitle(img) || 'No title from the provider';
+    const shape = shapeOf(img.width, img.height);
+    els.pvMeta.textContent = [
+        img.credit ? `Photo by ${img.credit}` : '',
+        providerName(img.provider),
+        img.width ? `${img.width}×${img.height}` : 'size unknown',
+        shape,
+        isSmall(img) ? 'under 1000px' : '',
+        `image ${pv.img + 1} of ${row.images.length}`,
+    ].filter(Boolean).join(' · ');
+
+    const selected = row.pick === pv.img;
+    els.pvSelect.setAttribute('aria-pressed', String(selected));
+    els.pvSelect.textContent = selected ? 'Selected — click to unselect' : 'Select this image';
+    els.pvSource.href = img.sourceUrl || img.full || '#';
+    els.pvSource.classList.toggle('hidden', !(img.sourceUrl || img.full));
+    els.pvPrev.disabled = pv.img <= 0;
+    els.pvNext.disabled = pv.img >= row.images.length - 1;
+}
+
+/** Close the preview and put keyboard focus on the image that was being viewed. */
+function closePreview() {
+    if (els.preview.open) els.preview.close();
+    const focusThumb = () => els.rows
+        .querySelector(`.krow[data-row="${pv.row}"] .thumb[data-img="${pv.img}"]`)
+        ?.focus({ preventScroll: true });
+    focusThumb();
+    // A pending re-render may replace the row; focus the fresh element too.
+    setTimeout(focusThumb, 0);
+}
+
+function movePreview(step) {
+    const row = queue.rows[pv.row];
+    if (!row) return;
+    const next = Math.min(row.images.length - 1, Math.max(0, pv.img + step));
+    if (next === pv.img) return;
+    pv.img = next;
+    revealImage(pv.row, next);   // the strip behind follows, so closing lands on it
+    renderPreview();
+    scheduleRender();
+}
+
+function toggleFromPreview() {
+    pick(pv.row, pv.img);
+    renderPreview();
 }
 
 function setFilter(name) {
@@ -641,11 +765,51 @@ export function initBulkMode() {
         }
         const i = Number(btn.dataset.row);
         const act = btn.dataset.act;
-        if (act === 'pick') pick(i, Number(btn.dataset.img));
+        if (act === 'pick') {
+            const j = Number(btn.dataset.img);
+            const now = Date.now();
+            // Remember the selection before the first click of a possible double-click.
+            const repeat = lastPickClick && lastPickClick.i === i && lastPickClick.j === j && now - lastPickClick.t < 600;
+            if (!repeat) lastPickClick = { i, j, t: now, before: queue.rows[i]?.pick ?? null };
+            pick(i, j);
+        }
+        if (act === 'preview') openPreview(i, queue.rows[i]?.pick ?? 0);
         if (act === 'more') { shown.set(i, shownFor(i, queue.rows[i]) + PER_ROW); scheduleRender(); }
         if (act === 'skip') queue.toggleSkip(i);
         if (act === 'retry') queue.retry(i);
     });
+
+    // Double-click a thumbnail to see it large. Its two clicks changed the
+    // selection, so put back what was selected before them.
+    els.rows.addEventListener('dblclick', (e) => {
+        const thumb = e.target.closest('.thumb[data-act="pick"]');
+        if (!thumb) return;
+        const i = Number(thumb.dataset.row);
+        const j = Number(thumb.dataset.img);
+        if (lastPickClick && lastPickClick.i === i && lastPickClick.j === j) {
+            const { before } = lastPickClick;
+            const current = queue.rows[i]?.pick ?? null;
+            if (current !== before) {
+                if (before == null) queue.clearPick(i);
+                else queue.pick(i, before);
+            }
+            lastPickClick = null;
+        }
+        openPreview(i, j);
+    });
+
+    $('preview-close').addEventListener('click', closePreview);
+    els.pvPrev.addEventListener('click', () => movePreview(-1));
+    els.pvNext.addEventListener('click', () => movePreview(1));
+    els.pvSelect.addEventListener('click', toggleFromPreview);
+    els.preview.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); movePreview(-1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); movePreview(1); }
+        else if (e.key === 'Escape') { e.preventDefault(); closePreview(); }
+        else if (e.key === 'Enter' && !e.target.closest('button, a')) { e.preventDefault(); toggleFromPreview(); }
+    });
+    // Click on the dimmed backdrop closes the preview.
+    els.preview.addEventListener('click', (e) => { if (e.target === els.preview) closePreview(); });
 
     els.rows.addEventListener('submit', (e) => {
         const form = e.target.closest('form.query');
@@ -663,7 +827,7 @@ export function initBulkMode() {
     });
 
     document.addEventListener('keydown', (e) => {
-        if ($('view-bulk').hidden || !queue.rows.length) return;
+        if ($('view-bulk').hidden || !queue.rows.length || els.preview.open) return;
         if ((e.target instanceof Element && e.target.closest('input, textarea, select')) || e.metaKey || e.ctrlKey || e.altKey) return;
         const rows = queue.rows;
         const vis = rows.map((_, i) => i).filter((i) => visible(rows[i]));
@@ -674,8 +838,14 @@ export function initBulkMode() {
         if (key === 'j' || key === 'arrowdown') { e.preventDefault(); setActive(vis[pos === -1 ? 0 : Math.min(vis.length - 1, pos + 1)]); }
         else if (key === 'k' || key === 'arrowup') { e.preventDefault(); setActive(vis[pos === -1 ? 0 : Math.max(0, pos - 1)]); }
         else if (/^[1-9]$/.test(key) && row) { pick(active, Number(key) - 1); }
-        else if (key === 'arrowright' && row?.pick != null) { e.preventDefault(); pick(active, Math.min(row.images.length - 1, row.pick + 1)); }
-        else if (key === 'arrowleft' && row?.pick != null) { e.preventDefault(); pick(active, Math.max(0, row.pick - 1)); }
+        else if ((key === 'arrowright' || key === 'arrowleft') && row?.images.length && !row.skipped) {
+            // Move the selection along the strip (never unselects at either end).
+            e.preventDefault();
+            const step = key === 'arrowright' ? 1 : -1;
+            const next = row.pick == null ? 0 : Math.min(row.images.length - 1, Math.max(0, row.pick + step));
+            if (next !== row.pick) pick(active, next);
+        }
+        else if (key === ' ' && row?.images.length && !row.skipped) { e.preventDefault(); openPreview(active, row.pick ?? 0); }
         else if (key === 's' && row) { queue.toggleSkip(active); }
         else if (key === 'x' && row) { queue.clearPick(active); }
         else if (key === 'e' && row) {

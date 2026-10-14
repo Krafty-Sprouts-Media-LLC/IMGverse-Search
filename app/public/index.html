@@ -209,6 +209,28 @@
         </div>
     </div>
 
+    <!-- Bulk keywords: large image preview -->
+    <dialog id="bulk-preview" class="preview" aria-labelledby="preview-title">
+        <div class="preview__head">
+            <p class="preview__keyword" id="preview-keyword"></p>
+            <button type="button" class="btn btn-ghost btn-sm" id="preview-close">Close</button>
+        </div>
+        <div class="preview__stage">
+            <button type="button" class="preview__nav" id="preview-prev" aria-label="Previous image">&#8249;</button>
+            <img id="preview-img" alt="" referrerpolicy="no-referrer">
+            <button type="button" class="preview__nav" id="preview-next" aria-label="Next image">&#8250;</button>
+        </div>
+        <div class="preview__info">
+            <h2 id="preview-title"></h2>
+            <p class="preview__meta" id="preview-meta"></p>
+            <div class="preview__actions">
+                <button type="button" class="btn btn-primary" id="preview-select" aria-pressed="false">Select this image</button>
+                <a class="btn btn-secondary" id="preview-source" target="_blank" rel="noopener">View on provider</a>
+            </div>
+            <p class="hint"><kbd>←</kbd> <kbd>→</kbd> browse · <kbd>Enter</kbd> select / unselect · <kbd>Esc</kbd> close</p>
+        </div>
+    </dialog>
+
     <script type="module" src="/app.js?v=2.0.2"></script>
 </body>
 </html>

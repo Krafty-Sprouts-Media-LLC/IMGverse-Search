@@ -562,6 +562,70 @@ kbd {
     white-space: nowrap;
 }
 .thumb__n { left: 6px; }
+.thumb__prov {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    max-width: calc(100% - 40px);
+    padding: 1px 5px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: oklch(0 0 0 / .62);
+    color: #fff;
+    font: 600 10px var(--font);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.krow__actions { display: flex; gap: 2px; flex: none; }
+.krow__selected {
+    margin-top: 6px;
+    overflow: hidden;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.krow__selected-label { font-weight: 600; color: var(--ink); }
+
+/* Large image preview (native <dialog>) */
+.preview {
+    width: min(1000px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    margin: auto;
+    padding: 0;
+    overflow: auto;
+    border: 0;
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink-2);
+}
+.preview::backdrop { background: oklch(0.15 0.01 12 / .72); }
+.preview__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.preview__keyword { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview__stage { position: relative; display: grid; place-items: center; min-height: 240px; background: oklch(0.2 0.01 12); }
+.preview__stage img { display: block; max-width: 100%; max-height: min(68vh, 760px); object-fit: contain; }
+.preview__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: oklch(1 0 0 / .9);
+    color: var(--ink);
+    font-size: 28px;
+    line-height: 1;
+}
+.preview__nav:first-child { left: 12px; }
+.preview__nav:last-of-type { right: 12px; }
+.preview__nav:disabled { opacity: .3; cursor: default; }
+.preview__info { display: grid; gap: 8px; padding: 14px 16px 16px; }
+.preview__info h2 { font-size: 16px; color: var(--ink); text-wrap: balance; }
+.preview__meta { font-size: 13px; }
+.preview__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.preview__actions .btn-secondary { text-decoration: none; }
+#preview-select[aria-pressed="true"] { background: var(--ok); }
 .thumb__dims { right: 6px; display: inline-flex; align-items: center; gap: 4px; }
 .thumb__dims--small { background: oklch(0.50 0.12 65 / .95); }
 .thumb--skeleton {
