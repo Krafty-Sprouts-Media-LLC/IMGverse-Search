@@ -8,8 +8,8 @@
 // Orientation support:
 //   - Providers with native support (Unsplash, Pexels, Pixabay) receive
 //     the param in their API request.
-//   - Providers without (iNaturalist) are filtered client-side
-//     by aspect ratio after results are returned.
+//   - Providers without (iNaturalist) are filtered after results return,
+//     using the shared rules in public/image-shape.js.
 //
 // @package IMGverse-Search
 // @since   1.0.0
@@ -22,31 +22,13 @@ import { search as unsplash    } from './unsplash.js';
 import { search as pexels      } from './pexels.js';
 import { search as pixabay     } from './pixabay.js';
 import { interleave, dedupeResults } from '../utils.js';
+import { filterByOrientation } from '../../public/image-shape.js';
 
 /** Each provider returns up to this many results per page. */
 export const RESULTS_PER_PROVIDER = 20;
 
 // Providers that accept an orientation param natively in their API
 const NATIVE_ORIENTATION = new Set(['unsplash', 'pexels', 'pixabay']);
-
-/**
- * Client-side orientation filter for providers that don't support it natively.
- *
- * @param {object[]} results     - Canonical ImageResult array.
- * @param {string}   orientation - '' | 'landscape' | 'portrait' | 'square'
- * @returns {object[]}
- */
-function filterByOrientation(results, orientation) {
-  if (!orientation) return results;
-  return results.filter(({ width, height }) => {
-    if (!width || !height) return true;
-    const ratio = width / height;
-    if (orientation === 'landscape') return ratio > 1.15;
-    if (orientation === 'portrait')  return ratio < 0.87;
-    if (orientation === 'square')    return ratio >= 0.87 && ratio <= 1.15;
-    return true;
-  });
-}
 
 /**
  * Search all active providers simultaneously and return interleaved results.

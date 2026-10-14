@@ -12,6 +12,10 @@
 
 'use strict';
 
+import { filterByOrientation } from './image-shape.js?v=1.0.36';
+
+export { filterByOrientation };
+
 export const OPENVERSE_ENDPOINT = 'https://api.openverse.org/v1/images/';
 export const OPENVERSE_ANON_PAGE_SIZE = 20;
 
@@ -103,25 +107,6 @@ export function messageFromFailedOpenverse(status, body) {
  */
 export function shouldFetchOpenverse(providerFilter) {
   return !providerFilter || providerFilter === 'openverse';
-}
-
-/**
- * Client-side orientation filter (Openverse has no native orientation param).
- *
- * @param {object[]} results
- * @param {string}   orientation '' | 'landscape' | 'portrait' | 'square'
- * @returns {object[]}
- */
-export function filterByOrientation(results, orientation) {
-  if (!orientation) return results;
-  return results.filter(({ width, height }) => {
-    if (!width || !height) return true;
-    const ratio = width / height;
-    if (orientation === 'landscape') return ratio > 1.15;
-    if (orientation === 'portrait')  return ratio < 0.87;
-    if (orientation === 'square')    return ratio >= 0.87 && ratio <= 1.15;
-    return true;
-  });
 }
 
 /**
