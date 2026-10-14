@@ -58,3 +58,33 @@ export function filterByOrientation(results, orientation) {
   if (!orientation) return results;
   return results.filter((img) => matchesOrientation(img, orientation));
 }
+
+/** Images shorter than this on their long edge are flagged and skipped by auto-pick. */
+export const MIN_LONG_EDGE = 1000;
+
+/**
+ * @param {{ width?: number, height?: number }} img
+ * @returns {boolean} True only when the size is known and below MIN_LONG_EDGE.
+ */
+export function isSmall(img) {
+  const w = Number(img?.width) || 0;
+  const h = Number(img?.height) || 0;
+  return Boolean(w && h) && Math.max(w, h) < MIN_LONG_EDGE;
+}
+
+/**
+ * Index of the image to pre-select: first of the requested shape that is
+ * big enough; otherwise the first image; null when there are none.
+ *
+ * @param {object[]} images
+ * @param {string}   orientation
+ * @returns {number|null}
+ */
+export function autoPick(images, orientation) {
+  if (!images.length) return null;
+  const i = images.findIndex((img) => {
+    const shape = shapeOf(img.width, img.height);
+    return (!orientation || shape === orientation) && !isSmall(img);
+  });
+  return i === -1 ? 0 : i;
+}

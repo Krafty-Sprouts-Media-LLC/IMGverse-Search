@@ -11,10 +11,44 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  MIN_LONG_EDGE,
+  autoPick,
   filterByOrientation,
+  isSmall,
   matchesOrientation,
   shapeOf,
 } from '../../public/image-shape.js';
+
+describe('isSmall', () => {
+  it('flags images whose long edge is under 1000px', () => {
+    assert.equal(MIN_LONG_EDGE, 1000);
+    assert.equal(isSmall({ width: 999, height: 600 }), true);
+    assert.equal(isSmall({ width: 600, height: 1000 }), false);
+    assert.equal(isSmall({ width: 1024, height: 683 }), false);
+  });
+  it('never flags images of unknown size', () => {
+    assert.equal(isSmall({ width: 0, height: 0 }), false);
+    assert.equal(isSmall({}), false);
+  });
+});
+
+describe('autoPick', () => {
+  const small = { width: 800, height: 500 };
+  const tall = { width: 1000, height: 1600 };
+  const wide = { width: 1600, height: 900 };
+  it('prefers the first image of the right shape that is big enough', () => {
+    assert.equal(autoPick([small, tall, wide], 'landscape'), 2);
+  });
+  it('accepts any shape when no orientation is set', () => {
+    assert.equal(autoPick([small, tall, wide], ''), 1);
+  });
+  it('falls back to the first image when none qualifies', () => {
+    assert.equal(autoPick([small, tall], 'square'), 0);
+  });
+  it('returns null for no images', () => {
+    assert.equal(autoPick([], 'landscape'), null);
+  });
+});
 
 describe('shapeOf', () => {
   it('classifies by width / height ratio', () => {
