@@ -4,7 +4,7 @@
  * download panel. Moved unchanged from app.js (v2.0.0 Part 2).
  *
  * @package IMGverse-Search
- * @since   2.0.0
+ * @since   1.0.0
  */
 
 'use strict';
