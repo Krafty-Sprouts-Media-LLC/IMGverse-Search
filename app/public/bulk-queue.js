@@ -65,10 +65,14 @@ export function createBulkQueue({
   let paused = false;
   let openverseResumeAt = 0;
   let cancelOpenverseTimer = null;
+  let canTopUp = () => true;
+  /** Real requests in flight, including ones for rows since re-queued or replaced. */
+  let inFlight = 0;
+  /** Bumped by load(); results from an older run are ignored. */
+  let generation = 0;
   const topUpsRunning = new Set();
 
   const inWindow = (i) => i <= readPos + LOOKAHEAD;
-  const loadingCount = () => rows.reduce((n, r) => n + (r.state === 'loading' ? 1 : 0), 0);
 
   function choosePick(row) {
     if (row.savedPickKey) {
@@ -92,48 +96,72 @@ export function createBulkQueue({
 
   async function runRow(row) {
     const token = ++row.token;
+    const gen = generation;
+    const stale = () => gen !== generation || token !== row.token;
     row.state = 'loading';
     row.error = '';
+    inFlight++;
     onChange();
 
     try {
       const out = await search({ query: row.query, orientation, providers: null });
-      if (token !== row.token) return;
-      row.images = Array.isArray(out?.results) ? out.results : [];
-      row.pending = pausedProviders(out?.providerStatus);
-      row.state = row.images.length ? 'done' : 'empty';
-      row.pick = choosePick(row);
-      if (row.pending.includes('openverse')) restOpenverse();
+      if (!stale()) {
+        const images = Array.isArray(out?.results) ? out.results : [];
+        row.images = images;
+        row.pending = pausedProviders(out?.providerStatus);
+        if (!images.length && out?.error) {
+          // The search failed (network, server error): say so, don't blame the query.
+          row.state = 'error';
+          row.error = out.error;
+          row.pick = null;
+        } else {
+          row.state = images.length ? 'done' : 'empty';
+          row.pick = choosePick(row);
+        }
+        if (row.pending.includes('openverse')) restOpenverse();
+      }
     } catch (err) {
-      if (token !== row.token) return;
-      console.error('[IMGverse/bulk] search failed for', JSON.stringify(row.query), err?.message || err);
-      row.state = 'error';
-      row.error = err?.message || 'Search failed';
-      row.images = [];
-      row.pick = null;
-      row.pending = [];
+      if (!stale()) {
+        console.error('[IMGverse/bulk] search failed for', JSON.stringify(row.query), err?.message || err);
+        row.state = 'error';
+        row.error = err?.message || 'Search failed';
+        row.images = [];
+        row.pick = null;
+        row.pending = [];
+      }
+    } finally {
+      inFlight--;
     }
 
+    if (gen !== generation) return;
     onChange();
     pump();
   }
 
+  /** Start queued rows inside the window, nearest the reading position first (ahead before behind). */
   function pump() {
     if (paused) return;
-    for (let i = 0; i < rows.length && loadingCount() < CONCURRENCY; i++) {
-      const row = rows[i];
-      if (row.state === 'queued' && !row.skipped && inWindow(i)) runRow(row);
+    const candidates = [];
+    rows.forEach((row, i) => {
+      if (row.state === 'queued' && !row.skipped && inWindow(i)) candidates.push(i);
+    });
+    candidates.sort((a, b) => (Math.abs(a - readPos) - Math.abs(b - readPos)) || (a < readPos) - (b < readPos));
+    for (const i of candidates) {
+      if (inFlight >= CONCURRENCY) break;
+      runRow(rows[i]);
     }
   }
 
+  /** @returns {Promise<'paused'|undefined>} 'paused' when the provider refused again. */
   async function topUpRow(row, provider) {
     const token = row.token;
+    const gen = generation;
     try {
       const out = await search({ query: row.query, orientation, providers: [provider] });
-      if (token !== row.token) return;
+      if (gen !== generation || token !== row.token) return undefined;
       if (out?.providerStatus?.[provider]?.status === 'paused') {
         if (provider === 'openverse') restOpenverse();
-        return;
+        return 'paused';
       }
       const seen = new Set(row.images.map(imageKey));
       const extra = (out?.results || []).filter((img) => !seen.has(imageKey(img)));
@@ -151,7 +179,7 @@ export function createBulkQueue({
 
   /** Re-ask one provider for every row waiting on it, nearest the reading position first. */
   async function topUp(provider) {
-    if (topUpsRunning.has(provider)) return;
+    if (topUpsRunning.has(provider) || !canTopUp(provider)) return;
     topUpsRunning.add(provider);
     try {
       const waiting = rows
@@ -160,7 +188,8 @@ export function createBulkQueue({
         .sort((a, b) => Math.abs(a.i - readPos) - Math.abs(b.i - readPos));
       for (const { row } of waiting) {
         if (paused) break;
-        await topUpRow(row, provider);
+        // Stop at once if the provider refuses again; its rest timer will retry.
+        if (await topUpRow(row, provider) === 'paused') break;
       }
     } finally {
       topUpsRunning.delete(provider);
@@ -177,6 +206,7 @@ export function createBulkQueue({
   }
 
   function load(keywords, { orientation: o = '', saved = null } = {}) {
+    generation++;
     if (cancelOpenverseTimer) { cancelOpenverseTimer(); cancelOpenverseTimer = null; }
     openverseResumeAt = 0;
 
@@ -216,10 +246,19 @@ export function createBulkQueue({
     get orientation() { return orientation; },
     /** ms epoch when Openverse may be asked again; 0 when it is not resting. */
     get openverseResumeAt() { return openverseResumeAt; },
+    /** (provider) => boolean — false for providers the user switched off. */
+    get canTopUp() { return canTopUp; },
+    set canTopUp(fn) { canTopUp = typeof fn === 'function' ? fn : () => true; },
 
     load,
     inWindow,
     topUp,
+
+    /** Forget a provider rows were waiting on (e.g. the user switched it off). */
+    dropPending(provider) {
+      rows.forEach((row) => { row.pending = row.pending.filter((p) => p !== provider); });
+      onChange();
+    },
 
     setReadPos(i) {
       readPos = Math.max(0, Math.min(rows.length - 1, Number(i) || 0));
@@ -277,6 +316,8 @@ export function createBulkQueue({
       paused = false;
       onChange();
       pump();
+      // An Openverse rest may have ended while paused; its top-up stopped then.
+      if (!openverseResumeAt) topUp('openverse');
     },
 
     counts() {

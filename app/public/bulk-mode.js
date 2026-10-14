@@ -59,6 +59,7 @@ const shown = new Map();
 const rowSig = new Map();
 
 const queue = createBulkQueue({ search: searchFor, onChange: scheduleRender });
+queue.canTopUp = (name) => (name === 'openverse' ? enabled.has('openverse') : !disabledByUser.has(name));
 
 /* ----------------------------------------------------------- helpers */
 
@@ -71,18 +72,24 @@ function clock(ms) {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** Unique, non-empty lines (the queue drops duplicates too, so the counts match). */
 function parseKeywords() {
-    return els.keywords.value.split('\n').map((s) => s.replace(/^[-*]\s+/, '').trim()).filter(Boolean);
+    return [...new Set(els.keywords.value.split('\n').map((s) => s.replace(/^[-*]\s+/, '').trim()).filter(Boolean))];
 }
 
 function serverNames() {
     return Object.keys(budgets);
 }
 
-/** Bridge from the queue to the search client, honouring the provider switches. */
-function searchFor({ query, orientation, providers }) {
+/**
+ * Bridge from the queue to the search client, honouring the provider
+ * switches and Openverse's rest after a 429. Failures come back as `error`
+ * so the row says the search failed instead of "nothing found".
+ */
+async function searchFor({ query, orientation, providers }) {
     let serverProviders;
     let openverse;
+    let openverseResting = false;
     if (providers) {
         const only = providers[0];
         serverProviders = only === 'openverse' ? [] : [only];
@@ -92,11 +99,25 @@ function searchFor({ query, orientation, providers }) {
         const on = all.filter((name) => !disabledByUser.has(name));
         serverProviders = on.length === all.length ? null : on;
         openverse = enabled.has('openverse');
+        // Don't ask Openverse while it is resting; mark it pending instead.
+        if (openverse && queue.openverseResumeAt > Date.now()) {
+            openverse = false;
+            openverseResting = true;
+        }
     }
+
+    const restingStatus = openverseResting ? { openverse: { status: 'paused' } } : {};
     if (serverProviders && !serverProviders.length && !openverse) {
-        return Promise.resolve({ results: [], providerStatus: {} });
+        return { results: [], providerStatus: restingStatus };
     }
-    return searchSources({ q: query, orientation, serverProviders, openverse });
+
+    const out = await searchSources({ q: query, orientation, serverProviders, openverse });
+    const openverseFailed = out.openverseError && out.openverseStatus !== 429;
+    return {
+        results: out.results,
+        providerStatus: { ...out.providerStatus, ...restingStatus },
+        error: out.results.length ? '' : (out.serverError || (openverseFailed ? out.openverseError : '')),
+    };
 }
 
 function shownFor(i, row) {
@@ -203,6 +224,13 @@ function rowHtml(row, i) {
     </article>`;
 }
 
+/** Selector for the same control in a redrawn row, so keyboard focus survives. */
+function focusSelector(el) {
+    const act = el.dataset?.act;
+    if (!act) return null;
+    return act === 'pick' ? `[data-act="pick"][data-img="${el.dataset.img}"]` : `[data-act="${act}"]`;
+}
+
 function signature(row, i) {
     return [row.state, row.query, row.pick, row.images.length, row.skipped, row.pending.join(','), row.error,
         i === active, queue.inWindow(i), shownFor(i, row)].join('|');
@@ -215,21 +243,25 @@ function renderRows() {
     const wanted = rows.map((row, i) => (visible(row) ? i : -1)).filter((i) => i !== -1);
     const existing = new Map([...els.rows.children].map((el) => [Number(el.dataset.row), el]));
 
-    // Keep a focused query input untouched while the user types in it.
-    const focusedRow = document.activeElement?.closest?.('.krow')?.dataset.row;
+    // Only a query input being typed in protects its row from a redraw.
+    // (A clicked button is focused too; that row must still update.)
+    const focused = document.activeElement;
+    const typingRow = focused?.matches?.('.query input') ? focused.closest('.krow')?.dataset.row : undefined;
 
     let prev = null;
     for (const i of wanted) {
         const row = rows[i];
         const sig = signature(row, i);
         let el = existing.get(i);
-        if (el && (rowSig.get(i) !== sig) && String(i) !== focusedRow) {
+        if (el && (rowSig.get(i) !== sig) && String(i) !== typingRow) {
             const tpl = document.createElement('template');
             tpl.innerHTML = rowHtml(row, i).trim();
             const fresh = tpl.content.firstElementChild;
+            const refocus = el.contains(focused) ? focusSelector(focused) : null;
             el.replaceWith(fresh);
             el = fresh;
             rowSig.set(i, sig);
+            if (refocus) fresh.querySelector(refocus)?.focus({ preventScroll: true });
         } else if (!el) {
             const tpl = document.createElement('template');
             tpl.innerHTML = rowHtml(row, i).trim();
@@ -263,10 +295,13 @@ function renderRunbar(c = queue.counts()) {
     const waitingInWindow = rows.some((r, i) => r.state === 'queued' && !r.skipped && queue.inWindow(i));
     const beyond = rows.filter((r, i) => r.state === 'queued' && !r.skipped && !queue.inWindow(i)).length;
 
+    const waitingOnOpenverse = queue.openverseResumeAt && rows.some((r) => r.pending.includes('openverse'));
+
     let state = 'Idle';
     let pulse = 'idle';
     if (c.all && queue.paused) { state = 'Paused by you'; pulse = 'paused'; }
     else if (c.all && (loading || waitingInWindow)) { state = 'Searching'; pulse = 'busy'; }
+    else if (c.all && waitingOnOpenverse) { state = 'Waiting for Openverse'; pulse = 'paused'; }
     else if (c.all && beyond) { state = 'Caught up'; pulse = 'ok'; }
     else if (c.all) { state = 'All searched'; pulse = 'ok'; }
 
@@ -280,7 +315,7 @@ function renderRunbar(c = queue.counts()) {
     const t = Date.now();
     for (const [name, b] of Object.entries(budgets)) {
         if (b.status === 'paused' && b.resumeAt) {
-            notes.push(`${NAMES[name] || name} ${b.per}ly limit reached, back in ${clock(Date.parse(b.resumeAt) - t)}`);
+            notes.push(`${NAMES[name] || name} limit reached, back in ${clock(Date.parse(b.resumeAt) - t)}`);
         }
     }
     if (queue.openverseResumeAt) notes.push(`Openverse asked us to slow down, retrying in ${clock(queue.openverseResumeAt - t)}`);
@@ -290,28 +325,47 @@ function renderRunbar(c = queue.counts()) {
     els.pause.textContent = queue.paused ? 'Resume' : 'Pause';
 }
 
-function renderProviders() {
+function providerView(name) {
     const t = Date.now();
-    const items = [{ name: 'openverse', live: true }, ...serverNames().map((name) => ({ name }))];
-    els.providers.innerHTML = items.map(({ name, live }) => {
-        const on = name === 'openverse' ? enabled.has('openverse') : !disabledByUser.has(name);
-        const b = budgets[name];
-        const resting = name === 'openverse' && queue.openverseResumeAt;
-        const paused = resting || b?.status === 'paused';
-        const left = live ? 'no published limit' : `${(b?.remaining ?? 0).toLocaleString()} / ${(b?.limit ?? 0).toLocaleString()}`;
-        const sub = resting
+    const live = name === 'openverse';
+    const b = budgets[name];
+    const resting = live && queue.openverseResumeAt;
+    const paused = Boolean(resting || b?.status === 'paused');
+    return {
+        paused,
+        left: live ? 'no published limit' : `${(b?.remaining ?? 0).toLocaleString()} / ${(b?.limit ?? 0).toLocaleString()}`,
+        sub: resting
             ? `Rate limited · retry in ${clock(queue.openverseResumeAt - t)}`
             : paused
                 ? `Paused · resets in ${clock(Date.parse(b.resumeAt) - t)}`
-                : (live ? 'Searched from your browser' : `Per ${b?.per || 'hour'}`);
-        const pct = live ? 100 : (b?.limit ? Math.round((b.remaining / b.limit) * 100) : 0);
-        return `<div class="pstat${paused ? ' pstat--paused' : ''}">
-            <label class="pstat__name"><input type="checkbox" data-provider="${esc(name)}" ${on ? 'checked' : ''}> ${esc(NAMES[name] || name)}</label>
-            <span class="pstat__left">${esc(left)}</span>
-            <div class="meter" aria-hidden="true"><span style="width:${pct}%"></span></div>
-            <span class="pstat__sub">${esc(sub)}</span>
-        </div>`;
-    }).join('');
+                : (live ? 'Searched from your browser' : `Per ${b?.per || 'hour'}`),
+        pct: live ? 100 : (b?.limit ? Math.round((b.remaining / b.limit) * 100) : 0),
+    };
+}
+
+/** Rebuild the list only when the providers change; otherwise update text in place (keeps focus). */
+function renderProviders() {
+    const names = ['openverse', ...serverNames()];
+    const key = names.join(',');
+    if (els.providers.dataset.key !== key) {
+        els.providers.dataset.key = key;
+        els.providers.innerHTML = names.map((name) => {
+            const on = name === 'openverse' ? enabled.has('openverse') : !disabledByUser.has(name);
+            return `<div class="pstat" data-provider="${esc(name)}">
+                <label class="pstat__name"><input type="checkbox" data-provider="${esc(name)}" ${on ? 'checked' : ''}> ${esc(NAMES[name] || name)}</label>
+                <span class="pstat__left"></span>
+                <div class="meter" aria-hidden="true"><span></span></div>
+                <span class="pstat__sub"></span>
+            </div>`;
+        }).join('');
+    }
+    for (const el of els.providers.querySelectorAll('.pstat')) {
+        const v = providerView(el.dataset.provider);
+        el.classList.toggle('pstat--paused', v.paused);
+        el.querySelector('.pstat__left').textContent = v.left;
+        el.querySelector('.pstat__sub').textContent = v.sub;
+        el.querySelector('.meter span').style.width = `${v.pct}%`;
+    }
 }
 
 function render() {
@@ -323,50 +377,69 @@ function render() {
 /* ----------------------------------------------------------- persistence */
 
 let persistTimer = null;
+function writeState() {
+    storageSet(STORAGE_KEY, JSON.stringify({
+        text: els.keywords.value,
+        size,
+        disabled: [...disabledByUser],
+        openverse: enabled.has('openverse'),
+        snapshot: queue.rows.length ? queue.snapshot() : null,
+    }));
+}
+
+/** Save at most once a second; `pagehide` flushes the last second. */
 function persist() {
     if (persistTimer) return;
     persistTimer = setTimeout(() => {
         persistTimer = null;
-        storageSet(STORAGE_KEY, JSON.stringify({
-            text: els.keywords.value,
-            size,
-            disabled: [...disabledByUser],
-            openverse: enabled.has('openverse'),
-            snapshot: queue.rows.length ? queue.snapshot() : null,
-        }));
+        writeState();
     }, 1000);
 }
 
-function restore() {
+/** Settings first, then provider budgets, then the run — so switched-off providers stay off. */
+async function restore() {
     const saved = storageGetJSON(STORAGE_KEY, null);
-    if (!saved || typeof saved !== 'object') return;
-    if (typeof saved.text === 'string') els.keywords.value = saved.text;
-    if (saved.size === 'full') size = 'full';
-    (saved.disabled || []).forEach((name) => disabledByUser.add(name));
-    if (saved.openverse === false) enabled.delete('openverse');
-    if (saved.snapshot?.keywords?.length) {
+    if (saved && typeof saved === 'object') {
+        if (typeof saved.text === 'string') els.keywords.value = saved.text;
+        if (saved.size === 'full') size = 'full';
+        (saved.disabled || []).forEach((name) => disabledByUser.add(name));
+        if (saved.openverse === false) enabled.delete('openverse');
+    }
+    await pollStatus();
+    if (saved?.snapshot?.keywords?.length) {
         active = Math.max(0, Number(saved.snapshot.readPos) || 0);
         setOrientationButtons(saved.snapshot.orientation || '');
         queue.load(saved.snapshot.keywords, { orientation: saved.snapshot.orientation || '', saved: saved.snapshot });
+        startPolling();
     }
 }
 
 /* ----------------------------------------------------------- provider status */
 
 let pollTimer = null;
-async function pollStatus() {
-    try {
-        const res = await fetch('/api/providers/status');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        budgets = await res.json();
-    } catch (err) {
-        console.error('[IMGverse/bulk] provider status failed:', err.message);
-    }
-    renderProviders();
-    renderRunbar();
-    for (const [name, b] of Object.entries(budgets)) {
-        if (b.status === 'ok' && queue.rows.some((r) => r.pending.includes(name))) queue.topUp(name);
-    }
+let polling = null;
+/** Re-polls already made for a provider's resumeAt (one each, so a clock gap can't cause a flood). */
+const repolledFor = new Set();
+
+function pollStatus() {
+    if (polling) return polling;
+    polling = (async () => {
+        try {
+            const res = await fetch('/api/providers/status');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            budgets = await res.json();
+        } catch (err) {
+            console.error('[IMGverse/bulk] provider status failed:', err.message);
+        }
+        renderProviders();
+        renderRunbar();
+        for (const [name, b] of Object.entries(budgets)) {
+            if (b.status === 'ok' && !disabledByUser.has(name) && queue.rows.some((r) => r.pending.includes(name))) {
+                queue.topUp(name);
+            }
+        }
+    })().finally(() => { polling = null; });
+    return polling;
 }
 
 function hasWork() {
@@ -491,6 +564,8 @@ export function initBulkMode() {
         if (name === 'openverse') { if (box.checked) enabled.add('openverse'); else enabled.delete('openverse'); }
         else if (box.checked) disabledByUser.delete(name);
         else disabledByUser.add(name);
+        // Switched off: stop waiting on it (no top-ups will spend its quota).
+        if (!box.checked) queue.dropPending(name);
         persist();
     });
 
@@ -558,11 +633,11 @@ export function initBulkMode() {
         const rows = queue.rows;
         const vis = rows.map((_, i) => i).filter((i) => visible(rows[i]));
         if (!vis.length) return;
-        const pos = Math.max(0, vis.indexOf(active));
+        const pos = vis.indexOf(active);   // -1 when the active row is filtered out
         const row = rows[active];
         const key = e.key.toLowerCase();
-        if (key === 'j' || key === 'arrowdown') { e.preventDefault(); setActive(vis[Math.min(vis.length - 1, pos + 1)]); }
-        else if (key === 'k' || key === 'arrowup') { e.preventDefault(); setActive(vis[Math.max(0, pos - 1)]); }
+        if (key === 'j' || key === 'arrowdown') { e.preventDefault(); setActive(vis[pos === -1 ? 0 : Math.min(vis.length - 1, pos + 1)]); }
+        else if (key === 'k' || key === 'arrowup') { e.preventDefault(); setActive(vis[pos === -1 ? 0 : Math.max(0, pos - 1)]); }
         else if (/^[1-9]$/.test(key) && row) { pick(active, Number(key) - 1); }
         else if (key === 'arrowright' && row?.pick != null) { e.preventDefault(); pick(active, Math.min(row.images.length - 1, row.pick + 1)); }
         else if (key === 'arrowleft' && row?.pick != null) { e.preventDefault(); pick(active, Math.max(0, row.pick - 1)); }
@@ -590,15 +665,25 @@ export function initBulkMode() {
         if (!anyPaused) return;
         renderProviders();
         renderRunbar();
-        for (const [name, b] of Object.entries(budgets)) {
-            if (b.status === 'paused' && b.resumeAt && Date.parse(b.resumeAt) <= Date.now()) pollStatus();
+        // When a provider's pause should be over, ask the server once for that resumeAt.
+        for (const b of Object.values(budgets)) {
+            if (b.status === 'paused' && b.resumeAt && Date.parse(b.resumeAt) <= Date.now() && !repolledFor.has(b.resumeAt)) {
+                repolledFor.add(b.resumeAt);
+                pollStatus();
+                break;
+            }
         }
     }, 1000);
 
-    restore();
-    updateKeywordCount();
-    document.querySelectorAll('#bulk-size button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.size === size)));
-    pollStatus();
-    if (queue.rows.length) startPolling();
-    scheduleRender();
+    window.addEventListener('pagehide', () => {
+        clearTimeout(persistTimer);
+        persistTimer = null;
+        writeState();
+    });
+
+    restore().then(() => {
+        updateKeywordCount();
+        document.querySelectorAll('#bulk-size button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.size === size)));
+        scheduleRender();
+    });
 }

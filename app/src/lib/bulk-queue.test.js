@@ -178,6 +178,108 @@ describe('bulk queue', () => {
     assert.deepEqual(q.downloadList().map((d) => [d.name, d.img.id]), [['what to serve with dish0', 'dish0-1']]);
   });
 
+  it('stops an Openverse top-up as soon as Openverse answers 429 again', async () => {
+    let ovPaused = true;
+    const { q, calls, advance } = harness({
+      results: (query, providers) => (providers ? [] : [img(`${query}-1`)]),
+      status: (query, providers) => (providers
+        ? { openverse: { status: ovPaused ? 'paused' : 'ok' } }
+        : { openverse: { status: 'paused' } }),
+    });
+    q.load(words(3), { orientation: '' });
+    await settle();
+    await advance(OPENVERSE_BACKOFF_MS);
+    assert.equal(calls.filter((c) => c.providers?.[0] === 'openverse').length, 1);
+    assert.ok(q.openverseResumeAt > 0);
+    ovPaused = false;
+    await advance(OPENVERSE_BACKOFF_MS);
+    assert.equal(q.counts().waiting, 0);
+  });
+
+  it('tops up Openverse on resume when the rest ended while paused', async () => {
+    const { q, calls, advance } = harness({
+      results: (query, providers) => (providers ? [img(`${query}-ov`)] : [img(`${query}-1`)]),
+      status: (query, providers) => (providers ? { openverse: { status: 'ok' } } : { openverse: { status: 'paused' } }),
+    });
+    q.load(words(1), { orientation: '' });
+    await settle();
+    q.pause();
+    await advance(OPENVERSE_BACKOFF_MS);
+    assert.equal(calls.filter((c) => c.providers).length, 0);
+    q.resume();
+    await settle();
+    assert.deepEqual(q.rows[0].pending, []);
+  });
+
+  it('shows a failed search as an error, not as "no results"', async () => {
+    const q = createBulkQueue({ search: async () => ({ results: [], providerStatus: {}, error: 'HTTP 500' }) });
+    q.load(words(1), { orientation: '' });
+    await settle();
+    assert.equal(q.rows[0].state, 'error');
+    assert.equal(q.rows[0].error, 'HTTP 500');
+    assert.equal(q.counts().review, 1);
+  });
+
+  it('searches the rows nearest the reading position first after a restore', async () => {
+    const { q, calls } = harness();
+    q.load(words(40), { orientation: '', saved: { readPos: 20, rows: [] } });
+    await settle();
+    assert.deepEqual(calls.slice(0, 2).map((c) => c.query), ['dish20', 'dish21']);
+  });
+
+  it('keeps at most two searches in flight when rows are re-queued mid-search', async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const q = createBulkQueue({
+      search: async () => {
+        inFlight++; peak = Math.max(peak, inFlight);
+        await tick(); await tick();
+        inFlight--;
+        return { results: [img('a')], providerStatus: {} };
+      },
+    });
+    q.load(words(6), { orientation: '' });
+    q.setQuery(0, 'new one');
+    q.setOrientation('portrait');
+    await settle();
+    assert.ok(peak <= CONCURRENCY, `peak ${peak}`);
+  });
+
+  it('ignores late results from a previous run', async () => {
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    let first = true;
+    const q = createBulkQueue({
+      search: async ({ query }) => {
+        if (first) { first = false; await gate; return { results: [img('old')], providerStatus: { openverse: { status: 'paused' } } }; }
+        return { results: [img(query)], providerStatus: {} };
+      },
+    });
+    q.load(['old keyword'], { orientation: '' });
+    q.load(['new keyword'], { orientation: '' });
+    release();
+    await settle();
+    assert.equal(q.rows.length, 1);
+    assert.equal(q.rows[0].images[0].id, 'new keyword');
+    assert.equal(q.openverseResumeAt, 0);
+  });
+
+  it('does not top up a provider the user switched off, and can drop it', async () => {
+    const { q, calls } = harness({
+      results: (query, providers) => (providers ? [img('px')] : []),
+      status: (query, providers) => (providers ? { pexels: { status: 'ok' } } : { pexels: { status: 'paused' } }),
+    });
+    q.canTopUp = (p) => p !== 'pexels';
+    q.load(words(1), { orientation: '' });
+    await settle();
+    q.topUp('pexels');
+    await settle();
+    assert.equal(calls.filter((c) => c.providers).length, 0);
+    q.dropPending('pexels');
+    assert.deepEqual(q.rows[0].pending, []);
+    assert.equal(q.counts().review, 1);
+  });
+
   it('dedupes and caps the keyword list', () => {
     const { q } = harness();
     q.load([' a ', 'a', '', ...words(1200)], { orientation: '' });
