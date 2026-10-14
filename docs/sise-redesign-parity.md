@@ -59,6 +59,13 @@ Source of truth for each item is listed so nothing is ported from memory.
 
 ## Known bugs to fix during the port (found 14/10/2026)
 
+Found during the v2.0.0 Part 2 browser check (present on master too; code moved unchanged):
+
+- [ ] Clicking a provider/orientation pill (or paging) while a search is still loading leaves the grid empty: `fetchPage()` returns early on `isLoading`, then the in-flight result is discarded as stale by `searchToken`. Fix: let the newer request run and drop the older one (token check only), instead of the `isLoading` early return.
+- [ ] After a reload, re-running the same search term wipes the restored batch queue: `BATCH_QUERY_KEY` is written but never read, so `currentQuery` is `''` and `startNewSearch` treats the term as new. Fix: restore `currentQuery` (and the search box) from `BATCH_QUERY_KEY` in `loadBatchState()`, or compare against the stored query.
+
+Found earlier:
+
 - [ ] iNaturalist width/height hard-coded to 0, so the orientation filter lets every iNaturalist image through (`app/src/providers/inaturalist.js`; API has `original_dimensions`)
 - [ ] sessionStorage writes are unguarded (`persistOpenedKeys`, `persistBatchKeywords`, `persistBatchSelections`, `resetBatchQueue` in `app/public/app.js`); when storage is blocked they throw and break the click handler. Wrap all storage access like `loadOpenedKeys` already does. (The demo crashed on exactly this before it was guarded.)
 - [ ] Openverse ignores its native `aspect_ratio=wide|tall|square` filter and drops results client-side instead (`app/public/openverse-client.js`)

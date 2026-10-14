@@ -1,0 +1,585 @@
+/**
+ * Search tab: one search term across all providers, filters, pagination,
+ * result cards ("Open full image", Opened marks) and the click-order batch
+ * download panel. Moved unchanged from app.js (v2.0.0 Part 2).
+ *
+ * @package IMGverse-Search
+ * @since   2.0.0
+ */
+
+'use strict';
+
+import { imageKey, searchAllSources } from './search-client.js?v=2.0.0';
+import {
+    formatBatchFailureLine,
+    formatBatchFinishMessage,
+} from './batch-helpers.js?v=1.0.34';
+import { downloadImage, runDownloadQueue } from './download-queue.js?v=2.0.0';
+import {
+    storageGet,
+    storageGetJSON,
+    storageRemove,
+    storageSet,
+} from './safe-storage.js?v=1.0.36';
+
+const searchForm    = document.getElementById('search-form');
+const searchInput   = document.getElementById('search-input');
+const grid          = document.getElementById('grid');
+const loader        = document.getElementById('loader');
+const emptyState    = document.getElementById('empty-state');
+const pagination    = document.getElementById('pagination');
+const pagePrev      = document.getElementById('page-prev');
+const pageNext      = document.getElementById('page-next');
+const pageLabel     = document.getElementById('page-label');
+const pageCount     = document.getElementById('page-count');
+const filterPills   = document.querySelectorAll('.filter-pill');
+const orientPills   = document.querySelectorAll('.orient-pill');
+const batchToggle      = document.getElementById('batch-toggle');
+const batchBody        = document.getElementById('batch-body');
+const batchFilenames   = document.getElementById('batch-filenames');
+const batchFilenameCount = document.getElementById('batch-filename-count');
+const batchSelectionCount = document.getElementById('batch-selection-count');
+const batchRemainingCount = document.getElementById('batch-remaining-count');
+const batchModeInput   = document.getElementById('batch-mode');
+const batchClearBtn    = document.getElementById('batch-clear');
+const batchDownloadBtn = document.getElementById('batch-download');
+const batchRetryBtn    = document.getElementById('batch-retry');
+const batchStatus      = document.getElementById('batch-status');
+const batchFailureList = document.getElementById('batch-failures');
+
+let currentQuery       = '';
+let currentPage        = 1;
+let currentProvider    = '';
+let currentOrientation = '';
+let hasNextPage        = false;
+let isLoading          = false;
+let searchToken        = 0;
+let batchMode          = false;
+let batchDownloading   = false;
+/** @type {object[]} */
+let batchSelections    = [];
+/** @type {{ img: object, name: string, error: string }[]} */
+let batchFailures      = [];
+
+const OPENED_STORAGE_KEY = 'imgverse:opened';
+const LEGACY_SAVED_STORAGE_KEY = 'imgverse:saved';
+const BATCH_KEYWORDS_KEY = 'imgverse:batch-keywords';
+const BATCH_SELECTIONS_KEY = 'imgverse:batch-selections';
+const BATCH_QUERY_KEY = 'imgverse:batch-query';
+
+/** @returns {Set<string>} */
+function loadOpenedKeys() {
+    let raw = storageGet(OPENED_STORAGE_KEY);
+    if (!raw) {
+        raw = storageGet(LEGACY_SAVED_STORAGE_KEY);
+        if (raw) {
+            if (storageSet(OPENED_STORAGE_KEY, raw)) storageRemove(LEGACY_SAVED_STORAGE_KEY);
+        }
+    }
+    let keys = [];
+    try {
+        keys = raw ? JSON.parse(raw) : [];
+    } catch {
+        keys = [];
+    }
+    return new Set(Array.isArray(keys) ? keys : []);
+}
+
+/** @param {Set<string>} keys */
+function persistOpenedKeys(keys) {
+    storageSet(OPENED_STORAGE_KEY, JSON.stringify([...keys]));
+}
+
+function isImageOpened(img) {
+    const keys = loadOpenedKeys();
+    const key  = imageKey(img);
+    return Boolean(key && (keys.has(key) || keys.has(img.id)));
+}
+
+function markImageOpened(img) {
+    const key = imageKey(img);
+    if (!key) return;
+
+    const keys = loadOpenedKeys();
+    keys.add(key);
+    if (img.id) keys.add(img.id);
+    persistOpenedKeys(keys);
+}
+
+function applyOpenedState(figure, img) {
+    figure.classList.add('img-card--opened');
+    figure.setAttribute('aria-label', `${img.alt || 'Image'} — opened this session`);
+
+    let pin = figure.querySelector('.opened-pin');
+    if (!pin) {
+        pin = document.createElement('span');
+        pin.className = 'opened-pin';
+        pin.textContent = 'Opened';
+        figure.insertBefore(pin, figure.firstChild);
+    }
+
+    const btn = figure.querySelector('.btn-open');
+    if (btn) {
+        btn.classList.add('btn-open--opened');
+        btn.title = 'Already opened this session — click to open again';
+        const svg = btn.querySelector('svg');
+        btn.textContent = '';
+        if (svg) btn.appendChild(svg);
+        btn.append(' Opened');
+    }
+}
+
+/** @param {string} text */
+function parseFilenames(text) {
+    return String(text || '').split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+function persistBatchKeywords() {
+    storageSet(BATCH_KEYWORDS_KEY, batchFilenames.value);
+    if (currentQuery) storageSet(BATCH_QUERY_KEY, currentQuery);
+}
+
+function persistBatchSelections() {
+    storageSet(BATCH_SELECTIONS_KEY, JSON.stringify(batchSelections));
+    if (currentQuery) storageSet(BATCH_QUERY_KEY, currentQuery);
+}
+
+function resetBatchQueue() {
+    batchSelections = [];
+    batchFilenames.value = '';
+    storageRemove(BATCH_KEYWORDS_KEY);
+    storageRemove(BATCH_SELECTIONS_KEY);
+    storageRemove(BATCH_QUERY_KEY);
+    batchStatus.textContent = '';
+    clearBatchFailures();
+    updateBatchPanel();
+}
+
+function loadBatchState() {
+    const keywords = storageGet(BATCH_KEYWORDS_KEY);
+    if (keywords != null) batchFilenames.value = keywords;
+
+    const saved = storageGetJSON(BATCH_SELECTIONS_KEY, []);
+    batchSelections = Array.isArray(saved) ? saved : [];
+    updateBatchPanel();
+}
+
+function getBatchOrder(img) {
+    const key = imageKey(img);
+    const idx = batchSelections.findIndex((s) => imageKey(s) === key);
+    return idx >= 0 ? idx + 1 : 0;
+}
+
+function syncBatchCardUI(figure, img) {
+    const order = getBatchOrder(img);
+    let badge = figure.querySelector('.batch-order');
+    let label = figure.querySelector('.batch-filename-preview');
+
+    if (order === 0) {
+        figure.classList.remove('img-card--batch-selected');
+        badge?.remove();
+        label?.remove();
+        return;
+    }
+
+    figure.classList.add('img-card--batch-selected');
+
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'batch-order';
+        figure.appendChild(badge);
+    }
+    badge.textContent = String(order);
+
+    const filenames = parseFilenames(batchFilenames.value);
+    const fname = filenames[order - 1] || '';
+
+    if (fname) {
+        if (!label) {
+            label = document.createElement('span');
+            label.className = 'batch-filename-preview';
+            figure.appendChild(label);
+        }
+        label.textContent = fname;
+    } else {
+        label?.remove();
+    }
+}
+
+function updateBatchPanel() {
+    const filenames = parseFilenames(batchFilenames.value);
+    const keywordCount = filenames.length;
+
+    if (keywordCount > 0 && batchSelections.length > keywordCount) {
+        batchSelections = batchSelections.slice(0, keywordCount);
+        persistBatchSelections();
+    }
+
+    const selCount  = batchSelections.length;
+    const remaining = Math.max(0, keywordCount - selCount);
+    const ready     = keywordCount > 0 && keywordCount === selCount;
+    const atCap     = keywordCount > 0 && selCount >= keywordCount;
+
+    batchFilenameCount.textContent = `${keywordCount} keyword${keywordCount === 1 ? '' : 's'}`;
+    batchSelectionCount.textContent = `${selCount} image${selCount === 1 ? '' : 's'} selected`;
+
+    if (keywordCount > 0) {
+        if (ready) {
+            batchRemainingCount.textContent = 'Ready to download';
+            batchRemainingCount.classList.remove('hidden');
+        } else if (atCap) {
+            batchRemainingCount.textContent = 'All keywords assigned';
+            batchRemainingCount.classList.remove('hidden');
+        } else {
+            batchRemainingCount.textContent = `${remaining} remaining`;
+            batchRemainingCount.classList.remove('hidden');
+        }
+    } else {
+        batchRemainingCount.textContent = '';
+        batchRemainingCount.classList.add('hidden');
+    }
+
+    batchDownloadBtn.disabled = batchDownloading || !ready;
+    batchClearBtn.disabled = batchDownloading || selCount === 0;
+    renderBatchFailures();
+    grid.classList.toggle('grid--batch-full', batchMode && atCap);
+
+    grid.querySelectorAll('.img-card').forEach((figure) => {
+        const img = figure.__imgData;
+        if (img) syncBatchCardUI(figure, img);
+    });
+}
+
+function toggleBatchSelection(img) {
+    const key = imageKey(img);
+    const idx = batchSelections.findIndex((s) => imageKey(s) === key);
+    const keywordCount = parseFilenames(batchFilenames.value).length;
+
+    if (idx >= 0) {
+        batchSelections.splice(idx, 1);
+    } else {
+        if (keywordCount === 0) {
+            batchStatus.textContent = 'Paste keywords first (one per line).';
+            return;
+        }
+        if (batchSelections.length >= keywordCount) {
+            batchStatus.textContent = 'All keywords assigned — click a selected image to deselect, then pick another.';
+            return;
+        }
+        batchSelections.push(img);
+        batchStatus.textContent = '';
+    }
+
+    persistBatchSelections();
+    clearBatchFailures();
+    updateBatchPanel();
+}
+
+function clearBatchSelection() {
+    batchSelections = [];
+    persistBatchSelections();
+    batchStatus.textContent = '';
+    clearBatchFailures();
+    updateBatchPanel();
+}
+
+/** @returns {'web'|'full'} */
+function getBatchDownloadSize() {
+    const selected = document.querySelector('input[name="batch-size"]:checked');
+    return selected?.value === 'full' ? 'full' : 'web';
+}
+
+function clearBatchFailures() {
+    batchFailures = [];
+    renderBatchFailures();
+}
+
+function renderBatchFailures() {
+    batchFailureList.replaceChildren();
+
+    if (!batchFailures.length) {
+        batchFailureList.classList.add('hidden');
+        batchRetryBtn.classList.add('hidden');
+        batchRetryBtn.disabled = true;
+        batchRetryBtn.textContent = 'Retry failed';
+        return;
+    }
+
+    batchFailureList.classList.remove('hidden');
+    batchRetryBtn.classList.remove('hidden');
+    batchRetryBtn.disabled = batchDownloading;
+    batchRetryBtn.textContent = `Retry ${batchFailures.length} failed`;
+
+    batchFailures.forEach((failure) => {
+        const li = document.createElement('li');
+        li.textContent = formatBatchFailureLine(failure);
+        batchFailureList.appendChild(li);
+    });
+}
+
+function queueFromSelections() {
+    const filenames = parseFilenames(batchFilenames.value);
+    if (filenames.length !== batchSelections.length || filenames.length === 0) return [];
+    return batchSelections.map((img, i) => ({ img, name: filenames[i] }));
+}
+
+async function runBatchQueue(queue) {
+    if (!queue.length || batchDownloading) return;
+
+    batchDownloading = true;
+    batchDownloadBtn.textContent = 'Downloading…';
+    updateBatchPanel();
+
+    const total = queue.length;
+    const size = getBatchDownloadSize();
+    const nextFailures = await runDownloadQueue(queue, {
+        download:   (img, name) => downloadImage(img, name, size),
+        onProgress: ({ index, name }) => {
+            batchStatus.textContent = `Downloading ${index + 1} of ${total}: ${name}`;
+        },
+    });
+
+    batchDownloading = false;
+    batchDownloadBtn.textContent = 'Download queue';
+    batchFailures = nextFailures;
+    batchStatus.textContent = formatBatchFinishMessage(total - nextFailures.length, nextFailures);
+    updateBatchPanel();
+}
+
+function runBatchDownload() {
+    clearBatchFailures();
+    return runBatchQueue(queueFromSelections());
+}
+
+function retryFailedDownloads() {
+    return runBatchQueue(batchFailures.map(({ img, name }) => ({ img, name })));
+}
+
+let initialised = false;
+
+/** Wire the Search tab. Safe to call once; later calls do nothing. */
+export function initSearchMode() {
+    if (initialised) return;
+    initialised = true;
+
+    batchToggle.addEventListener('click', () => {
+        const collapsed = batchBody.classList.toggle('hidden');
+        batchToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    });
+
+    batchFilenames.addEventListener('input', () => {
+        persistBatchKeywords();
+        clearBatchFailures();
+        updateBatchPanel();
+    });
+
+    batchModeInput.addEventListener('change', () => {
+        batchMode = batchModeInput.checked;
+        grid.classList.toggle('grid--batch-mode', batchMode);
+        batchStatus.textContent = batchMode
+            ? 'Batch mode on — click images in the order they should match your filenames.'
+            : '';
+    });
+
+    batchClearBtn.addEventListener('click', clearBatchSelection);
+    batchDownloadBtn.addEventListener('click', runBatchDownload);
+    batchRetryBtn.addEventListener('click', retryFailedDownloads);
+
+    searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const q = searchInput.value.trim();
+        if (!q) return;
+        startNewSearch(q);
+    });
+
+    filterPills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+            filterPills.forEach((p) => p.classList.remove('active'));
+            pill.classList.add('active');
+            currentProvider = pill.dataset.provider || '';
+            if (currentQuery) startNewSearch(currentQuery);
+        });
+    });
+
+    orientPills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+            orientPills.forEach((p) => p.classList.remove('active'));
+            pill.classList.add('active');
+            currentOrientation = pill.dataset.orientation || '';
+            if (currentQuery) startNewSearch(currentQuery);
+        });
+    });
+
+    pagePrev.addEventListener('click', () => {
+        if (currentPage <= 1 || isLoading) return;
+        goToPage(currentPage - 1);
+    });
+
+    pageNext.addEventListener('click', () => {
+        if (!hasNextPage || isLoading) return;
+        goToPage(currentPage + 1);
+    });
+
+    loadBatchState();
+}
+
+function startNewSearch(q) {
+    const queryChanged = q !== currentQuery;
+
+    searchToken++;
+    currentQuery = q;
+    currentPage  = 1;
+
+    if (queryChanged) {
+        resetBatchQueue();
+    }
+
+    goToPage(1);
+}
+
+function goToPage(page) {
+    currentPage = page;
+    grid.innerHTML = '';
+    emptyState.classList.add('hidden');
+    pagination.classList.add('hidden');
+    fetchPage();
+}
+
+async function fetchPage() {
+    if (isLoading || !currentQuery) return;
+
+    const token = searchToken;
+    isLoading   = true;
+    loader.classList.remove('hidden');
+
+    try {
+        const { results, hasNext, openverseError } = await searchAllSources({
+            q:           currentQuery,
+            page:        currentPage,
+            provider:    currentProvider,
+            orientation: currentOrientation,
+        });
+
+        if (token !== searchToken) return;
+
+        hasNextPage = hasNext;
+
+        if (results.length === 0) {
+            if (currentPage === 1) {
+                showEmptyState(
+                    currentProvider === 'openverse' && openverseError
+                        ? openverseError
+                        : undefined
+                );
+            } else {
+                hasNextPage = false;
+                updatePagination();
+            }
+        } else {
+            renderCards(results);
+            updatePagination(results.length);
+            pagination.classList.remove('hidden');
+            updateBatchPanel();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    } catch (err) {
+        console.error('[IMGverse]', err.message);
+        if (currentPage === 1) showEmptyState();
+    } finally {
+        isLoading = false;
+        loader.classList.add('hidden');
+    }
+}
+
+function updatePagination(totalOnPage) {
+    pageLabel.textContent = `Page ${currentPage}`;
+    pageCount.textContent = totalOnPage != null
+        ? `${totalOnPage} image${totalOnPage === 1 ? '' : 's'} on this page`
+        : '';
+    pagePrev.disabled = currentPage <= 1;
+    pageNext.disabled = !hasNextPage;
+}
+
+function renderCards(results) {
+    results.forEach((img) => {
+        const figure = document.createElement('figure');
+        figure.className = 'img-card';
+        const opened = isImageOpened(img);
+
+        const aspectStyle = img.width && img.height
+            ? `aspect-ratio: ${img.width} / ${img.height};`
+            : '';
+
+        figure.innerHTML = `
+            ${opened ? '<span class="opened-pin">Opened</span>' : ''}
+            <img
+                src="${escHtml(img.thumb)}"
+                alt="${escHtml(img.alt || '')}"
+                loading="lazy"
+                decoding="async"
+                style="${aspectStyle}"
+            >
+            <div class="card-overlay" aria-hidden="true">
+                <div class="card-top">
+                    <span class="provider-badge">${escHtml(img.provider)}</span>
+                </div>
+                <div class="card-bottom">
+                    ${img.credit ? `<p class="card-credit">📷 <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a></p>` : ''}
+                    <a
+                        class="btn-open${opened ? ' btn-open--opened' : ''}"
+                        href="${escHtml(img.full)}"
+                        target="_blank"
+                        rel="noopener"
+                        title="${opened ? 'Already opened this session — click to open again' : 'Open full-resolution image from the provider — right-click to Save As'}"
+                    >
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        ${opened ? 'Opened' : 'Open full image'}
+                    </a>
+                </div>
+            </div>
+        `;
+
+        if (opened) {
+            figure.classList.add('img-card--opened');
+            figure.setAttribute('aria-label', `${img.alt || 'Image'} — opened this session`);
+        }
+
+        figure.__imgData = img;
+        syncBatchCardUI(figure, img);
+
+        const openBtn = figure.querySelector('.btn-open');
+        openBtn.addEventListener('click', () => {
+            markImageOpened(img);
+            applyOpenedState(figure, img);
+        });
+
+        figure.querySelector('img').addEventListener('contextmenu', () => {
+            markImageOpened(img);
+            applyOpenedState(figure, img);
+        });
+
+        figure.addEventListener('click', (e) => {
+            if (!batchMode || batchDownloading) return;
+            if (e.target.closest('a')) return;
+            toggleBatchSelection(img);
+        });
+
+        grid.appendChild(figure);
+    });
+}
+
+function showEmptyState(message) {
+    emptyState.classList.remove('hidden');
+    pagination.classList.add('hidden');
+    emptyState.querySelector('h2').textContent = `No results for "${currentQuery}"`;
+    emptyState.querySelector('p').textContent  = message
+        || 'Try a different keyword or check that at least one provider is configured.';
+}
+
+function escHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
