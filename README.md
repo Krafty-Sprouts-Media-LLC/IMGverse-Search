@@ -113,7 +113,7 @@ Openverse and iNaturalist need no key.
 
 ### Check it works
 
-- `https://<your-domain>/healthz` returns `ok`.
+- `https://<your-domain>/healthz` returns `healthy`.
 - `https://<your-domain>/api/providers/status` lists every provider that has a key (iNaturalist is always there).
 - Search for `cat` in the **Search** tab; images from each configured provider appear.
 
@@ -133,17 +133,24 @@ Openverse and iNaturalist need no key.
 
 All variables are documented in [`.env.example`](.env.example).
 
+Only the three API keys matter for most installs; everything else has a sensible default.
+
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `STACK_SLUG` | Yes | `imgverse` | Short prefix for Docker volume names |
-| `UNSPLASH_KEY` | No | — | Unsplash API key (free at unsplash.com/developers) |
-| `PEXELS_KEY` | No | — | Pexels API key (free at pexels.com/api) |
-| `PIXABAY_KEY` | No | — | Pixabay API key (free at pixabay.com/api) |
-| `FLICKR_KEY` | No | — | Flickr API key (free at flickr.com/services/apps/create) |
-| `OPENVERSE_CLIENT_ID` | No | — | Unused by the UI (browser search). Kept for the unused server adapter. |
-| `OPENVERSE_CLIENT_SECRET` | No | — | Unused by the UI (browser search). Kept for the unused server adapter. |
+| `STACK_SLUG` | Recommended | Dokploy app name | Short prefix for the Redis volume name (`<slug>_redis_data`). Set before the first deploy. |
+| `UNSPLASH_KEY` | No | — | Unsplash API key (free at unsplash.com/developers). Without it Unsplash is skipped. |
+| `PEXELS_KEY` | No | — | Pexels API key (free at pexels.com/api). Without it Pexels is skipped. |
+| `PIXABAY_KEY` | No | — | Pixabay API key (free at pixabay.com/api). Without it Pixabay is skipped. |
+| `DOWNLOAD_MAX_WIDTH` | No | `1920` | Longest side of downloaded files when **Web** size is chosen |
+| `DOWNLOAD_JPEG_QUALITY` | No | `82` | JPEG quality (1–100) of downloaded files |
+| `PEXELS_RATE_LIMIT` | No | `200` | Pexels requests per hour SISE allows itself (raise if Pexels granted you more) |
+| `UNSPLASH_RATE_LIMIT` | No | `5000` | Unsplash requests per hour (Unsplash's own header wins if it reports a different limit) |
+| `PIXABAY_RATE_LIMIT` | No | `100` | Pixabay requests per minute |
+| `INATURALIST_RATE_LIMIT` | No | `60` | iNaturalist requests per minute |
+| `SISE_VERSION` | No | `latest` | Template deploys only: which image version to pull (e.g. `2.0.2`) |
 | `PROXY_MAX_SIZE_MB` | No | `20` | Maximum proxied image size in MB |
 | `REDIS_MAXMEMORY` | No | `256mb` | Redis memory cap |
+| `FLICKR_KEY`, `OPENVERSE_CLIENT_ID`, `OPENVERSE_CLIENT_SECRET` | No | — | Not used by the app today (Flickr isn't one of the search providers; Openverse is searched from the browser without a key). Safe to omit. |
 
 > **Openverse** is searched from the **browser** so Cloudflare cannot block the VPS. OAuth is not required for this app. Guide for other server-side projects: **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)**. **iNaturalist** needs no key.
 
