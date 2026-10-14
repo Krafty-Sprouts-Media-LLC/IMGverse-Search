@@ -1,0 +1,22 @@
+# SISE — Dokploy template settings.
+# Dokploy fills ${domain} with a generated domain (change it in Domains later)
+# and injects APP_NAME at deploy. Fill in the API keys in the Environment tab;
+# any provider left empty is simply skipped.
+
+[variables]
+main_domain = "${domain}"
+stack_slug = "${APP_NAME}"
+
+[config]
+env = [
+  "STACK_SLUG=${stack_slug}",
+  "SISE_VERSION=latest",
+  "UNSPLASH_KEY=",
+  "PEXELS_KEY=",
+  "PIXABAY_KEY=",
+]
+
+[[config.domains]]
+serviceName = "nginx"
+port = 80
+host = "${main_domain}"

@@ -1,12 +1,14 @@
 [
   {
-    "id": "imgverse-search",
+    "id": "sise",
     "name": "SISE",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "SISE (Stock image search engine): self-hosted stock image aggregator. Searches Openverse, iNaturalist, Unsplash, Pexels and Pixabay at once, and turns keyword lists into one image per keyword, named after the keyword.",
+    "logo": "sise.svg",
     "links": {
-      "github": "https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search",
-      "docs": "https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search#readme"
+      "github": "https://github.com/Krafty-Sprouts-Media-LLC/SISE",
+      "website": "https://github.com/Krafty-Sprouts-Media-LLC/SISE",
+      "docs": "https://github.com/Krafty-Sprouts-Media-LLC/SISE#readme"
     },
     "tags": ["images", "stock", "search", "aggregator", "node", "redis", "nginx", "self-hosted"]
   }

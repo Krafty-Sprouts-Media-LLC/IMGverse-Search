@@ -18,7 +18,7 @@ import { normalize } from '../utils.js';
 import { getOpenverseToken, isOpenverseBlocked } from './openverse-auth.js';
 
 const BASE = 'https://api.openverse.org/v1/images/';
-const UA   = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+const UA   = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/SISE)';
 
 /**
  * Build request headers, attaching OAuth Bearer token when configured.

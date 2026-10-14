@@ -54,7 +54,7 @@ export const ALLOWED_DOMAINS = new Set([
 ]);
 
 export const MAX_SIZE_BYTES = (parseInt(process.env.PROXY_MAX_SIZE_MB, 10) || 20) * 1024 * 1024;
-const UA = 'SISE/2.0 (image proxy; +https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+const UA = 'SISE/2.0 (image proxy; +https://github.com/Krafty-Sprouts-Media-LLC/SISE)';
 
 /** Default long-edge cap for batch /download when size=web. */
 export function getDownloadMaxWidth() {

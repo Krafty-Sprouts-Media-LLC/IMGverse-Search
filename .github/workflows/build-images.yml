@@ -2,8 +2,10 @@ name: Build and Push Docker Images
 
 # =============================================================================
 # build-images.yml
-# SISE — Build and push app + nginx images to GHCR on every
-# push to main that touches source files. Mirrors KSM WPDokploystack pattern.
+# SISE — Build and push app + nginx images to GHCR, used by the Dokploy
+# template (blueprints/sise/docker-compose.yml pulls them).
+# Runs on every release tag (v*.*.*), on pushes to master that touch the
+# images' sources, and by hand. Mirrors KSM WPDokploystack pattern.
 #
 # @package SISE
 # @since   1.0.0
@@ -11,11 +13,11 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: [main]
+    branches: [master]
+    tags: ['v*.*.*']
     paths:
       - 'app/**'
       - 'nginx/**'
-      - 'docker-compose.yml'
       - '.github/workflows/build-images.yml'
   workflow_dispatch:
 
@@ -36,7 +38,7 @@ jobs:
       - name: Set lowercase image prefix
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_PREFIX=ghcr.io/${OWNER_LC}/imgverse-search" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX=ghcr.io/${OWNER_LC}/sise" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

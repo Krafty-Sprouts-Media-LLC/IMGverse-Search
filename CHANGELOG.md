@@ -5,6 +5,20 @@ All notable changes to SISE (formerly IMGverse Search) will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 14/10/2026
+
+### Fixed
+- **The Dokploy template (Create Service → Template → Base URL) now works.** It never could before: Dokploy reads `blueprints/<id>/docker-compose.yml` and `template.toml`, which did not exist, and the documented Base URL used the `main` branch while the repository uses `master`. Added `blueprints/sise/` (compose file that pulls prebuilt images, `template.toml` with the API key fields ready to fill in, logo) and set the template id to `sise`. Base URL: `https://raw.githubusercontent.com/Krafty-Sprouts-Media-LLC/SISE/master`.
+- **Prebuilt images are actually published.** The image workflow only ran on a `main` branch that does not exist, so no images were ever built. It now runs on every release tag and on `master`, and publishes `ghcr.io/krafty-sprouts-media-llc/sise-app` and `sise-nginx` (`latest` and the version number).
+
+### Changed
+- README deploy guide rewritten: both options step by step with the exact field values, where to get each API key, how to check the deploy, and a troubleshooting table.
+- Repository links and provider User-Agent contact URLs point at the renamed repository (`Krafty-Sprouts-Media-LLC/SISE`).
+
+### Deployment notes
+- Existing deployments created as "Compose from Git" keep working unchanged (they still build from the repository root `docker-compose.yml`).
+- After this release's image build finishes, set the two GHCR packages (`sise-app`, `sise-nginx`) to **public** once, so Dokploy can pull them without credentials.
+
 ## [2.0.0] - 14/10/2026
 
 ### Added

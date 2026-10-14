@@ -17,7 +17,7 @@
 import fetch from 'node-fetch';
 
 const TOKEN_URL = 'https://api.openverse.org/v1/auth_tokens/token/';
-const UA = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+const UA = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/SISE)';
 
 /** @type {string|null} */
 let cachedToken = null;

@@ -36,57 +36,96 @@ No format conversion. No proxy in the normal user flow. Images are exactly what 
 
 ---
 
-## Quick Start (Dokploy)
+## Deploy on Dokploy
 
-### Option A: Manual Compose Deploy
+There are two ways. Both end with the same three containers (`nginx`, `app`, `redis`).
 
-1. In Dokploy → your Project → **Create Service** → **Docker Compose**
-   > ⚠️ **Critical:** Choose **Docker Compose**, NOT "Application". Choosing "Application" will trigger a Nixpacks build and fail because this is a multi-container compose stack.
-2. Select your GitHub account and the **IMGverse-Search** repository
-3. Branch: `master` · Build Path: `/` (repo root — leave as default)
-4. Go to **Environment** tab and add:
+| | Option A: Template | Option B: Compose from Git |
+|---|---|---|
+| Builds on your server | No (pulls ready-made images) | Yes (a few minutes per deploy) |
+| Needs a GitHub connection in Dokploy | No | Yes, or a public Git URL |
+| Updates | Redeploy pulls the newest release | Redeploy rebuilds from `master` |
+| Best for | New installs | Running your own changes |
+
+Before you start, have these ready (all free, all optional — a provider without a key is skipped):
+
+- Unsplash key: <https://unsplash.com/developers> (apply for **Production** to get 5,000 requests/hour instead of 50)
+- Pexels key: <https://www.pexels.com/api/>
+- Pixabay key: <https://pixabay.com/api/docs/>
+- A domain or subdomain pointing at your Dokploy server's IP (an `A` record), e.g. `images.example.com`
+
+Openverse and iNaturalist need no key.
+
+### Option A: Template (recommended)
+
+1. In Dokploy, open your **Project** and click **Create Service** → **Template**.
+2. At the top of the template list, set **Base URL** to exactly:
+   ```
+   https://raw.githubusercontent.com/Krafty-Sprouts-Media-LLC/SISE/master
+   ```
+   (The branch is `master`, not `main`. With `main` the list comes back empty.)
+3. Search for **SISE** and click **Create**. Dokploy creates a Compose service with a generated domain.
+4. Open the new service's **Environment** tab. You'll see:
    ```env
-   STACK_SLUG=imgverse
-   UNSPLASH_KEY=your_unsplash_key
-   PEXELS_KEY=your_pexels_key
-   PIXABAY_KEY=your_pixabay_key
-   FLICKR_KEY=your_flickr_key
-   OPENVERSE_CLIENT_ID=your_openverse_client_id
-   OPENVERSE_CLIENT_SECRET=your_openverse_client_secret
+   STACK_SLUG=<generated>
+   SISE_VERSION=latest
+   UNSPLASH_KEY=
+   PEXELS_KEY=
+   PIXABAY_KEY=
    ```
-   > Use a short `STACK_SLUG` (e.g. `imgverse`) **before the first deploy** so volumes are named `imgverse_redis_data` not a long Dokploy-generated name.
-5. Click **Deploy**
+   Paste your keys after the `=` signs and click **Save**.
+   - `STACK_SLUG` names the Redis volume (`<slug>_redis_data`). Change it to something short like `sise` **before the first deploy**, or leave it.
+   - `SISE_VERSION` pins a release (e.g. `2.0.1`); `latest` follows new releases on each redeploy.
+5. Open the **Domains** tab. Edit the generated domain (or add one) and set **Host** to your domain; leave **Service Name** `nginx`, **Path** `/`, **Container Port** `80`. Turn on **HTTPS** with the **Let's Encrypt** certificate.
+6. Click **Deploy** and watch **Logs** until `nginx` and `app` report healthy (about a minute).
+7. Open your domain. You should see SISE with the **Search** and **Bulk keywords** tabs.
 
-### Option B: One-Click Template Deploy
+### Option B: Compose from Git
 
-1. In Dokploy → **Projects** → **Create Service** → **Template**
-2. Set the **Base URL** to:
+1. In Dokploy, open your **Project** and click **Create Service** → **Compose** (not **Application** — an Application tries a single-container Nixpacks build and fails).
+2. Give it a name (e.g. `sise`) and click **Create**.
+3. In the service's **General** tab, choose the source:
+   - **GitHub** (if your GitHub account is connected in Dokploy settings): repository **SISE**, branch **`master`**.
+   - or **Git**: URL `https://github.com/Krafty-Sprouts-Media-LLC/SISE.git`, branch **`master`**.
+   - **Compose Path**: `./docker-compose.yml`
+   Click **Save**.
+4. **Environment** tab — paste and fill in, then **Save**:
+   ```env
+   STACK_SLUG=sise
+   UNSPLASH_KEY=
+   PEXELS_KEY=
+   PIXABAY_KEY=
    ```
-   https://raw.githubusercontent.com/Krafty-Sprouts-Media-LLC/IMGverse-Search/main
-   ```
-3. Find **SISE** and click **Create**
-4. Add your API keys in the **Environment** tab
-5. Click **Deploy**
+   Set `STACK_SLUG` **before the first deploy**; it names the Redis volume (`sise_redis_data`). Existing installs keep whatever slug they already use.
+5. **Domains** tab → **Add Domain**:
 
----
+   | Field | Value |
+   |-------|-------|
+   | **Service Name** | `nginx` |
+   | **Host** | your domain, e.g. `images.example.com` |
+   | **Path** | `/` |
+   | **Container Port** | `80` |
+   | **HTTPS** | On, certificate **Let's Encrypt** |
 
-## Post-Deploy Setup
+   Only `nginx` gets a domain — `app` and `redis` are internal.
+6. Back in **General**, click **Deploy**. The first build takes a few minutes; follow it in **Deployments** / **Logs**.
+7. Open your domain.
 
-### Configure Domains
+### Check it works
 
-Go to the **Domains** tab and click **Add Domain**. Fill in the dialog as follows:
+- `https://<your-domain>/healthz` returns `ok`.
+- `https://<your-domain>/api/providers/status` lists every provider that has a key (iNaturalist is always there).
+- Search for `cat` in the **Search** tab; images from each configured provider appear.
 
-| Field | Value |
-|-------|-------|
-| **Service Name** | `nginx` |
-| **Host** | `images.yourdomain.com` (your actual domain) |
-| **Path** | `/` |
-| **Internal Path** | `/` |
-| **Container Port** | `80` |
+### Troubleshooting
 
-> **Important:** Service Name must be `nginx` — that is the only container on the public `dokploy-network`. The `app` and `redis` containers are internal only and should never be given a public domain.
-
-Traefik will auto-provision an SSL certificate. No SSH required.
+| Symptom | Fix |
+|---|---|
+| Template list empty after setting Base URL | The URL must end in `/SISE/master` (no trailing slash, `master` not `main`). |
+| Template deploy fails pulling `ghcr.io/krafty-sprouts-media-llc/sise-…` | The images are published by the **Build and Push Docker Images** workflow on each release; the repo owner must set both packages to **public** on GitHub (Package settings → Change visibility). |
+| `404` / "Bad Gateway" on the domain | The domain must point at **Service Name `nginx`, port `80`**. Check `nginx` and `app` are healthy in **Logs**. |
+| A provider never shows results | Its key is missing or wrong — check `/api/providers/status` and the `app` logs (`[SISE/<provider>]` lines). |
+| Option B fails with a Nixpacks error | The service was created as **Application**; create it as **Compose**. |
 
 ---
 
@@ -132,8 +171,8 @@ Search Openverse from the user's browser, not from Node. See **[docs/OPENVERSE-O
 
 ```bash
 # 1. Clone and enter the project
-git clone https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search.git
-cd IMGverse-Search
+git clone https://github.com/Krafty-Sprouts-Media-LLC/SISE.git
+cd SISE
 
 # 2. Copy and fill in your env file
 cp .env.example .env

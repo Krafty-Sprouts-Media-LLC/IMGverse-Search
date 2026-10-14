@@ -1,0 +1,88 @@
+# =============================================================================
+# blueprints/sise/docker-compose.yml
+# SISE — Dokploy template compose file.
+# Same stack as the repo-root docker-compose.yml, but PULLS the prebuilt
+# images from GHCR (a template deploy has no source code to build from).
+# Images are published by .github/workflows/build-images.yml on every release.
+#
+# @package SISE
+# @since   2.0.1
+# =============================================================================
+
+services:
+  # nginx — reverse proxy. The ONLY container on dokploy-network.
+  nginx:
+    image: ghcr.io/krafty-sprouts-media-llc/sise-nginx:${SISE_VERSION:-latest}
+    ports:
+      - "80"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - dokploy-network
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: "${NGINX_CPU_LIMIT:-0.5}"
+          memory: "${NGINX_MEMORY_LIMIT:-128M}"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # app — Node.js/Express: search aggregator + image proxy + static files.
+  app:
+    image: ghcr.io/krafty-sprouts-media-llc/sise-app:${SISE_VERSION:-latest}
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: "${APP_CPU_LIMIT:-1.0}"
+          memory: "${APP_MEMORY_LIMIT:-512M}"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # redis — search result cache (1 hr TTL, one entry per provider per query).
+  redis:
+    image: redis:alpine
+    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-256mb} --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: "${REDIS_CPU_LIMIT:-0.25}"
+          memory: "${REDIS_MEMORY_LIMIT:-256M}"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  dokploy-network:
+    external: true
+  internal:
+    driver: bridge
+
+volumes:
+  redis_data:
+    name: ${STACK_SLUG:-${COMPOSE_PROJECT_NAME:-sise}}_redis_data

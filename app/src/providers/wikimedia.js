@@ -14,7 +14,7 @@ import fetch from 'node-fetch';
 import { normalize } from '../utils.js';
 
 const API = 'https://commons.wikimedia.org/w/api.php';
-const UA  = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+const UA  = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/SISE)';
 
 /**
  * Strip a Commons /thumb/ scaled URL back to the original upload URL.
