@@ -8,122 +8,130 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css?v=1.0.36">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css?v=2.0.0">
 </head>
 <body>
 
-    <header id="site-header">
+    <header class="topbar">
         <div class="logo">
-            <div class="logo-icon" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-            </div>
-            IMGverse Search
+            <span class="logo-mark" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </span>
+            <span class="logo-name">IMGverse Search</span>
         </div>
-
-        <form id="search-form" role="search" aria-label="Search stock images">
-            <div class="search-wrapper">
-                <svg class="search-icon" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input
-                    type="search"
-                    id="search-input"
-                    name="q"
-                    placeholder="Search millions of stock images..."
-                    autocomplete="off"
-                    aria-label="Search query"
-                    required>
-            </div>
-        </form>
+        <nav class="tabs" role="tablist" aria-label="Mode">
+            <button type="button" class="tab" role="tab" id="tab-search" data-tab="search" aria-controls="view-search" aria-selected="true">Search</button>
+            <button type="button" class="tab" role="tab" id="tab-bulk" data-tab="bulk" aria-controls="view-bulk" aria-selected="false" tabindex="-1">Bulk keywords</button>
+        </nav>
     </header>
 
-    <div id="filters-bar" aria-label="Filter by provider">
-        <button class="filter-pill active" data-provider="">All Providers</button>
-        <button class="filter-pill" data-provider="openverse">Openverse</button>
-        <button class="filter-pill" data-provider="unsplash">Unsplash</button>
-        <button class="filter-pill" data-provider="pexels">Pexels</button>
-        <button class="filter-pill" data-provider="inaturalist">iNaturalist</button>
-        <button class="filter-pill" data-provider="pixabay">Pixabay</button>
+    <!-- ============================ SEARCH ============================ -->
+    <div class="view" id="view-search" role="tabpanel" aria-labelledby="tab-search">
+
+        <aside class="sidebar" aria-label="Batch download">
+            <section class="batch-panel">
+                <button type="button" id="batch-toggle" class="batch-panel__toggle" aria-expanded="true" aria-controls="batch-body">
+                    <span>Batch download</span>
+                    <svg class="batch-panel__chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="batch-body" class="batch-panel__body">
+                    <p class="hint">Paste filenames (one per line), turn on batch mode, click images in order, then download. A <strong>new search term</strong> clears the queue; changing pages or filters does not. Credits go in the IPTC caption as <strong>Photo by Name / Provider</strong>.</p>
+
+                    <label class="label" for="batch-filenames">Filenames</label>
+                    <textarea id="batch-filenames" class="textarea" rows="6" spellcheck="false" placeholder="Ferret laws in West Virginia&#10;Ferret laws in Vermont&#10;Ferret laws in Utah" aria-describedby="batch-filename-count batch-selection-count batch-remaining-count"></textarea>
+                    <div class="batch-panel__meta">
+                        <span id="batch-filename-count">0 keywords</span>
+                        <span id="batch-selection-count">0 images selected</span>
+                        <span id="batch-remaining-count" class="batch-panel__remaining hidden" aria-live="polite"></span>
+                    </div>
+
+                    <fieldset class="batch-panel__size">
+                        <legend class="label">Download size</legend>
+                        <label class="radio">
+                            <input type="radio" name="batch-size" value="web" checked>
+                            Web <span class="muted">max 1920px</span>
+                        </label>
+                        <label class="radio">
+                            <input type="radio" name="batch-size" value="full">
+                            Full resolution
+                        </label>
+                    </fieldset>
+
+                    <label class="switch">
+                        <input type="checkbox" id="batch-mode">
+                        Batch mode: click images to assign in order
+                    </label>
+
+                    <div class="batch-panel__actions">
+                        <button type="button" id="batch-download" class="btn btn-primary" disabled>Download queue</button>
+                        <button type="button" id="batch-clear" class="btn btn-secondary" disabled>Clear selection</button>
+                        <button type="button" id="batch-retry" class="btn btn-secondary hidden" disabled>Retry failed</button>
+                    </div>
+                    <p id="batch-status" class="batch-status" aria-live="polite"></p>
+                    <ul id="batch-failures" class="batch-failures hidden" aria-live="polite"></ul>
+                </div>
+            </section>
+        </aside>
+
+        <main class="main" id="main-content">
+            <form id="search-form" class="searchbar" role="search" aria-label="Search stock images">
+                <label class="searchbar__field">
+                    <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4" aria-hidden="true"><path stroke-linecap="round" d="M21 21l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"/></svg>
+                    <input type="search" id="search-input" name="q" placeholder="Search stock images" autocomplete="off" aria-label="Search query" required>
+                </label>
+                <button type="submit" class="btn btn-primary btn-lg">Search</button>
+            </form>
+
+            <div class="filters">
+                <div class="chips" role="group" aria-label="Filter by provider">
+                    <button type="button" class="chip filter-pill active" data-provider="" aria-pressed="true">All providers</button>
+                    <button type="button" class="chip filter-pill" data-provider="openverse" aria-pressed="false">Openverse</button>
+                    <button type="button" class="chip filter-pill" data-provider="unsplash" aria-pressed="false">Unsplash</button>
+                    <button type="button" class="chip filter-pill" data-provider="pexels" aria-pressed="false">Pexels</button>
+                    <button type="button" class="chip filter-pill" data-provider="inaturalist" aria-pressed="false">iNaturalist</button>
+                    <button type="button" class="chip filter-pill" data-provider="pixabay" aria-pressed="false">Pixabay</button>
+                </div>
+                <div class="chips" role="group" aria-label="Filter by orientation">
+                    <span class="filter-label">Orientation</span>
+                    <button type="button" class="chip orient-pill active" data-orientation="" aria-pressed="true">Any</button>
+                    <button type="button" class="chip orient-pill" data-orientation="landscape" aria-pressed="false"><span class="shape-ico shape-ico--landscape" aria-hidden="true"></span>Landscape</button>
+                    <button type="button" class="chip orient-pill" data-orientation="portrait" aria-pressed="false"><span class="shape-ico shape-ico--portrait" aria-hidden="true"></span>Portrait</button>
+                    <button type="button" class="chip orient-pill" data-orientation="square" aria-pressed="false"><span class="shape-ico shape-ico--square" aria-hidden="true"></span>Square</button>
+                </div>
+            </div>
+
+            <div id="empty-state" class="empty-state" aria-live="polite">
+                <h2>Search one term across every provider</h2>
+                <p>Openverse, iNaturalist, Unsplash, Pexels and Pixabay, 20 per provider, per page. For a list of keywords, use the Bulk keywords tab.</p>
+            </div>
+
+            <div id="grid" class="grid" aria-label="Search results" aria-live="polite"></div>
+
+            <div id="loader" class="loader hidden" aria-label="Loading results">
+                <span></span><span></span><span></span>
+            </div>
+
+            <nav id="pagination" class="pagination hidden" aria-label="Results pages">
+                <button type="button" id="page-prev" class="btn btn-secondary" disabled>Previous</button>
+                <div class="page-info">
+                    <span id="page-label">Page 1</span>
+                    <span id="page-count" class="page-count"></span>
+                </div>
+                <button type="button" id="page-next" class="btn btn-secondary">Next</button>
+            </nav>
+        </main>
     </div>
 
-    <div id="orientation-bar" aria-label="Filter by orientation">
-        <span class="filter-label">Orientation:</span>
-        <button class="orient-pill active" data-orientation="">Any</button>
-        <button class="orient-pill" data-orientation="landscape">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/></svg>
-            Landscape
-        </button>
-        <button class="orient-pill" data-orientation="portrait">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><rect x="6" y="2" width="12" height="20" rx="2"/></svg>
-            Portrait
-        </button>
-        <button class="orient-pill" data-orientation="square">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-            Square
-        </button>
+    <!-- ========================= BULK KEYWORDS ========================= -->
+    <div class="view view--single" id="view-bulk" role="tabpanel" aria-labelledby="tab-bulk" hidden>
+        <main class="main">
+            <div class="empty-state">
+                <h2>One image per keyword, named after the keyword</h2>
+                <p>Bulk keywords is being built for this release.</p>
+            </div>
+        </main>
     </div>
-
-    <aside id="batch-panel" class="batch-panel" aria-label="Batch download">
-        <button type="button" id="batch-toggle" class="batch-panel__toggle" aria-expanded="false" aria-controls="batch-body">
-            <span>Batch download</span>
-            <svg class="batch-panel__chevron" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <div id="batch-body" class="batch-panel__body hidden">
-            <p class="batch-panel__hint">Paste keywords (one per line), turn on batch mode, click images in order, then download. A <strong>new search term</strong> clears the batch queue; changing pages or filters does not. Credits: <strong>Photo by Name / Provider</strong> in IPTC Caption (no URLs).</p>
-            <textarea id="batch-filenames" class="batch-panel__textarea" rows="6" placeholder="Ferret laws in West Virginia&#10;Ferret laws in Vermont&#10;Ferret laws in Utah" aria-describedby="batch-filename-count batch-selection-count batch-remaining-count"></textarea>
-            <div class="batch-panel__meta">
-                <span id="batch-filename-count">0 keywords</span>
-                <span id="batch-selection-count">0 images selected</span>
-                <span id="batch-remaining-count" class="batch-panel__remaining hidden" aria-live="polite"></span>
-            </div>
-            <fieldset class="batch-panel__size">
-                <legend class="batch-panel__size-label">Download size</legend>
-                <label class="batch-panel__size-option">
-                    <input type="radio" name="batch-size" value="web" checked>
-                    Web (max 1920px, smaller files)
-                </label>
-                <label class="batch-panel__size-option">
-                    <input type="radio" name="batch-size" value="full">
-                    Full resolution (provider original)
-                </label>
-            </fieldset>
-            <label class="batch-panel__mode">
-                <input type="checkbox" id="batch-mode">
-                Batch mode — click images to assign in order
-            </label>
-            <div class="batch-panel__actions">
-                <button type="button" id="batch-clear" class="batch-btn batch-btn--secondary" disabled>Clear selection</button>
-                <button type="button" id="batch-download" class="batch-btn batch-btn--primary" disabled>Download queue</button>
-                <button type="button" id="batch-retry" class="batch-btn batch-btn--secondary hidden" disabled>Retry failed</button>
-            </div>
-            <p id="batch-status" class="batch-status" aria-live="polite"></p>
-            <ul id="batch-failures" class="batch-failures hidden" aria-live="polite"></ul>
-        </div>
-    </aside>
-
-    <main id="main-content">
-        <div id="empty-state" class="empty-state" aria-live="polite">
-            <div class="empty-icon" aria-hidden="true">
-                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            </div>
-            <h2>Search for anything</h2>
-            <p>Find images across Openverse, iNaturalist, Unsplash, Pexels, and Pixabay — 20 per provider, per page.</p>
-        </div>
-
-        <div id="grid" class="grid" aria-label="Search results" aria-live="polite"></div>
-
-        <div id="loader" class="loader hidden" aria-label="Loading results">
-            <span></span><span></span><span></span>
-        </div>
-
-        <nav id="pagination" class="pagination hidden" aria-label="Results pages">
-            <button type="button" id="page-prev" class="page-btn" disabled>Previous</button>
-            <div class="page-info">
-                <span id="page-label">Page 1</span>
-                <span id="page-count" class="page-count"></span>
-            </div>
-            <button type="button" id="page-next" class="page-btn">Next</button>
-        </nav>
-    </main>
 
     <script type="module" src="/app.js?v=2.0.0"></script>
 </body>

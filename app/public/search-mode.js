@@ -355,6 +355,14 @@ function retryFailedDownloads() {
     return runBatchQueue(batchFailures.map(({ img, name }) => ({ img, name })));
 }
 
+/** Mark one pill in a group as selected (visual `.active` + `aria-pressed`). */
+function selectPill(group, selected) {
+    group.forEach((p) => {
+        p.classList.toggle('active', p === selected);
+        p.setAttribute('aria-pressed', String(p === selected));
+    });
+}
+
 let initialised = false;
 
 /** Wire the Search tab. Safe to call once; later calls do nothing. */
@@ -394,8 +402,7 @@ export function initSearchMode() {
 
     filterPills.forEach((pill) => {
         pill.addEventListener('click', () => {
-            filterPills.forEach((p) => p.classList.remove('active'));
-            pill.classList.add('active');
+            selectPill(filterPills, pill);
             currentProvider = pill.dataset.provider || '';
             if (currentQuery) startNewSearch(currentQuery);
         });
@@ -403,8 +410,7 @@ export function initSearchMode() {
 
     orientPills.forEach((pill) => {
         pill.addEventListener('click', () => {
-            orientPills.forEach((p) => p.classList.remove('active'));
-            pill.classList.add('active');
+            selectPill(orientPills, pill);
             currentOrientation = pill.dataset.orientation || '';
             if (currentQuery) startNewSearch(currentQuery);
         });
@@ -524,7 +530,7 @@ function renderCards(results) {
                     <span class="provider-badge">${escHtml(img.provider)}</span>
                 </div>
                 <div class="card-bottom">
-                    ${img.credit ? `<p class="card-credit">📷 <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a></p>` : ''}
+                    ${img.credit ? `<p class="card-credit">Photo by <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a></p>` : ''}
                     <a
                         class="btn-open${opened ? ' btn-open--opened' : ''}"
                         href="${escHtml(img.full)}"
