@@ -23,9 +23,10 @@ const BASE = 'https://api.unsplash.com/search/photos';
  * @param {string} query       - Search term.
  * @param {number} page        - Page number (1-indexed).
  * @param {string} orientation - '' | 'landscape' | 'portrait' | 'square'
+ * @param {object}   [options]            - { onResponse(res), fetchImpl } — used by the rate budget and tests.
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
-export async function search(query, page = 1, orientation = '') {
+export async function search(query, page = 1, orientation = '', { onResponse, fetchImpl = fetch } = {}) {
   if (!process.env.UNSPLASH_KEY) return [];
 
   try {
@@ -33,15 +34,19 @@ export async function search(query, page = 1, orientation = '') {
     const orientMap = { landscape: 'landscape', portrait: 'portrait', square: 'squarish' };
     const params = new URLSearchParams({ query, page, per_page: 20 });
     if (orientation && orientMap[orientation]) params.set('orientation', orientMap[orientation]);
-    const res = await fetch(`${BASE}?${params}`, {
+    const res = await fetchImpl(`${BASE}?${params}`, {
       headers: {
         Authorization: `Client-ID ${process.env.UNSPLASH_KEY}`,
         'Accept-Version': 'v1',
       },
       signal: AbortSignal.timeout(8000),
     });
+    onResponse?.(res);
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error(`[IMGverse/unsplash] HTTP ${res.status} for q="${query}"`);
+      return [];
+    }
 
     const data = await res.json();
     return (data.results || []).map((item) =>
@@ -59,7 +64,8 @@ export async function search(query, page = 1, orientation = '') {
         sourceUrl: item.links?.html || '',
       })
     );
-  } catch {
+  } catch (err) {
+    console.error(`[IMGverse/unsplash] search failed for q="${query}":`, err.message);
     return [];
   }
 }

@@ -20,9 +20,11 @@ const BASE = 'https://api.inaturalist.org/v1/observations';
  *
  * @param {string} query - Search term.
  * @param {number} page  - Page number (1-indexed).
+ * @param {string} _orientation - Ignored: iNaturalist has no orientation filter; the aggregator filters results.
+ * @param {object} [options]    - { onResponse(res), fetchImpl } — used by the rate budget and tests.
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
-export async function search(query, page = 1) {
+export async function search(query, page = 1, _orientation = '', { onResponse, fetchImpl = fetch } = {}) {
   try {
     const params = new URLSearchParams({
       q: query,
@@ -33,10 +35,11 @@ export async function search(query, page = 1) {
       order_by: 'votes',
     });
 
-    const res = await fetch(`${BASE}?${params}`, {
+    const res = await fetchImpl(`${BASE}?${params}`, {
       headers: { 'User-Agent': 'IMGverse-Search/1.0' },
       signal: AbortSignal.timeout(8000),
     });
+    onResponse?.(res);
 
     if (!res.ok) {
       console.error(`[IMGverse/inaturalist] HTTP ${res.status} for q="${query}"`);

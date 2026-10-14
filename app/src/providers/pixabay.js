@@ -22,9 +22,10 @@ const BASE = 'https://pixabay.com/api/';
  * @param {string} query       - Search term.
  * @param {number} page        - Page number (1-indexed).
  * @param {string} orientation - '' | 'landscape' | 'portrait' | 'square'
+ * @param {object}   [options]            - { onResponse(res), fetchImpl } — used by the rate budget and tests.
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
-export async function search(query, page = 1, orientation = '') {
+export async function search(query, page = 1, orientation = '', { onResponse, fetchImpl = fetch } = {}) {
   if (!process.env.PIXABAY_KEY) return [];
 
   try {
@@ -40,11 +41,15 @@ export async function search(query, page = 1, orientation = '') {
     });
     if (orientation && orientMap[orientation]) params.set('orientation', orientMap[orientation]);
 
-    const res = await fetch(`${BASE}?${params}`, {
+    const res = await fetchImpl(`${BASE}?${params}`, {
       signal: AbortSignal.timeout(8000),
     });
+    onResponse?.(res);
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error(`[IMGverse/pixabay] HTTP ${res.status} for q="${query}"`);
+      return [];
+    }
 
     const data = await res.json();
     return (data.hits || []).map((item) =>
@@ -62,7 +67,8 @@ export async function search(query, page = 1, orientation = '') {
         sourceUrl: item.pageURL || '',
       })
     );
-  } catch {
+  } catch (err) {
+    console.error(`[IMGverse/pixabay] search failed for q="${query}":`, err.message);
     return [];
   }
 }

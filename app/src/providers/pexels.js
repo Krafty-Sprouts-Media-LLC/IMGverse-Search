@@ -22,21 +22,26 @@ const BASE = 'https://api.pexels.com/v1/search';
  * @param {string} query       - Search term.
  * @param {number} page        - Page number (1-indexed).
  * @param {string} orientation - '' | 'landscape' | 'portrait' | 'square'
+ * @param {object}   [options]            - { onResponse(res), fetchImpl } — used by the rate budget and tests.
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
-export async function search(query, page = 1, orientation = '') {
+export async function search(query, page = 1, orientation = '', { onResponse, fetchImpl = fetch } = {}) {
   if (!process.env.PEXELS_KEY) return [];
 
   try {
     // Pexels supports orientation natively with the same names (landscape/portrait/square)
     const params = new URLSearchParams({ query, page, per_page: 20 });
     if (orientation) params.set('orientation', orientation);
-    const res = await fetch(`${BASE}?${params}`, {
+    const res = await fetchImpl(`${BASE}?${params}`, {
       headers: { Authorization: process.env.PEXELS_KEY },
       signal: AbortSignal.timeout(8000),
     });
+    onResponse?.(res);
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error(`[IMGverse/pexels] HTTP ${res.status} for q="${query}"`);
+      return [];
+    }
 
     const data = await res.json();
     return (data.photos || []).map((item) =>
@@ -54,7 +59,8 @@ export async function search(query, page = 1, orientation = '') {
         sourceUrl: item.url || '',
       })
     );
-  } catch {
+  } catch (err) {
+    console.error(`[IMGverse/pexels] search failed for q="${query}":`, err.message);
     return [];
   }
 }
