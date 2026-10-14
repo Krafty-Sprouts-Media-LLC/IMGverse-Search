@@ -9,12 +9,7 @@
 
 'use strict';
 
-import {
-    mergeHasNext,
-    searchOpenverse,
-    shouldFetchOpenverse,
-    weaveOpenverse,
-} from './openverse-client.js?v=1.0.36';
+import { imageKey, searchAllSources } from './search-client.js?v=2.0.0';
 import {
     formatBatchFailureLine,
     formatBatchFinishMessage,
@@ -93,17 +88,6 @@ function loadOpenedKeys() {
 /** @param {Set<string>} keys */
 function persistOpenedKeys(keys) {
     storageSet(OPENED_STORAGE_KEY, JSON.stringify([...keys]));
-}
-
-/** Stable key for the same image across pages (matches server dedupe logic). */
-function imageKey(img) {
-    const raw = img.full || img.thumb || '';
-    try {
-        const parsed = new URL(raw);
-        return `${parsed.hostname}${parsed.pathname}`.toLowerCase();
-    } catch {
-        return img.id || '';
-    }
 }
 
 function isImageOpened(img) {
@@ -493,35 +477,6 @@ function goToPage(page) {
     fetchPage();
 }
 
-async function fetchServerSearch() {
-    const params = new URLSearchParams({
-        q:    currentQuery,
-        page: String(currentPage),
-    });
-    if (currentProvider)    params.set('providers',   currentProvider);
-    if (currentOrientation) params.set('orientation', currentOrientation);
-
-    const res  = await fetch(`/api/search?${params}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Search failed');
-
-    return {
-        results: Array.isArray(data.results) ? data.results : [],
-        hasNext: Boolean(data.hasNext),
-    };
-}
-
-function dedupeClientResults(results) {
-    const seen = new Set();
-    return results.filter((img) => {
-        const key = imageKey(img);
-        if (!key || seen.has(key) || seen.has(img.id)) return false;
-        seen.add(key);
-        if (img.id) seen.add(img.id);
-        return true;
-    });
-}
-
 async function fetchPage() {
     if (isLoading || !currentQuery) return;
 
@@ -530,40 +485,22 @@ async function fetchPage() {
     loader.classList.remove('hidden');
 
     try {
-        const wantOpenverse = shouldFetchOpenverse(currentProvider);
-        const wantServer    = currentProvider !== 'openverse';
-
-        const serverPromise = wantServer
-            ? fetchServerSearch().catch((err) => {
-                console.error('[IMGverse]', err.message);
-                return { results: [], hasNext: false };
-            })
-            : Promise.resolve({ results: [], hasNext: false });
-
-        const openversePromise = wantOpenverse
-            ? searchOpenverse({
-                q:           currentQuery,
-                page:        currentPage,
-                orientation: currentOrientation,
-            })
-            : Promise.resolve({ images: [], hasNext: false, error: '' });
-
-        const [server, openverse] = await Promise.all([serverPromise, openversePromise]);
+        const { results, hasNext, openverseError } = await searchAllSources({
+            q:           currentQuery,
+            page:        currentPage,
+            provider:    currentProvider,
+            orientation: currentOrientation,
+        });
 
         if (token !== searchToken) return;
 
-        if (openverse.error) {
-            console.error('[IMGverse/openverse]', openverse.error);
-        }
-
-        const results = dedupeClientResults(weaveOpenverse(server.results, openverse.images));
-        hasNextPage = mergeHasNext(server.hasNext, openverse.hasNext);
+        hasNextPage = hasNext;
 
         if (results.length === 0) {
             if (currentPage === 1) {
                 showEmptyState(
-                    currentProvider === 'openverse' && openverse.error
-                        ? openverse.error
+                    currentProvider === 'openverse' && openverseError
+                        ? openverseError
                         : undefined
                 );
             } else {
