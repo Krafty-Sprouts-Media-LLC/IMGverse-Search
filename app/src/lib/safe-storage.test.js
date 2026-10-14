@@ -11,6 +11,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  migrateKeys,
   storageGet,
   storageGetJSON,
   storageRemove,
@@ -20,11 +21,46 @@ import {
 function memoryStorage() {
   const map = new Map();
   return {
+    map,
+    get length() { return map.size; },
+    key: (i) => [...map.keys()][i] ?? null,
     getItem: (k) => (map.has(k) ? map.get(k) : null),
     setItem: (k, v) => { map.set(k, String(v)); },
     removeItem: (k) => { map.delete(k); },
   };
 }
+
+describe('migrateKeys', () => {
+  it('moves old-prefix keys to the new prefix and removes the old ones', () => {
+    const s = memoryStorage();
+    s.setItem('imgverse:opened', '["a"]');
+    s.setItem('imgverse:batch-keywords', 'one\ntwo');
+    s.setItem('other:keep', 'x');
+    assert.equal(migrateKeys('imgverse:', 'sise:', s), 2);
+    assert.equal(s.getItem('sise:opened'), '["a"]');
+    assert.equal(s.getItem('sise:batch-keywords'), 'one\ntwo');
+    assert.equal(s.getItem('imgverse:opened'), null);
+    assert.equal(s.getItem('other:keep'), 'x');
+  });
+
+  it('never overwrites data already saved under the new prefix', () => {
+    const s = memoryStorage();
+    s.setItem('sise:bulk', 'new');
+    s.setItem('imgverse:bulk', 'stale');
+    assert.equal(migrateKeys('imgverse:', 'sise:', s), 0);
+    assert.equal(s.getItem('sise:bulk'), 'new');
+    assert.equal(s.getItem('imgverse:bulk'), null);
+  });
+
+  it('does nothing and never throws when storage is blocked or missing', async () => {
+    let blocked;
+    await captureWarn(() => {
+      blocked = migrateKeys('imgverse:', 'sise:', { get length() { throw new Error('SecurityError'); } });
+    });
+    assert.equal(blocked, 0);
+    assert.equal(migrateKeys('imgverse:', 'sise:'), 0);
+  });
+});
 
 const throwing = {
   getItem() { throw new Error('SecurityError'); },

@@ -14,9 +14,9 @@ import { searchSources } from './search-client.js?v=2.0.0';
 import { isSmall, shapeOf } from './image-shape.js?v=2.0.0';
 import { downloadImage, runDownloadQueue } from './download-queue.js?v=2.0.0';
 import { formatBatchFailureLine, formatBatchFinishMessage } from './batch-helpers.js?v=1.0.34';
-import { storageGetJSON, storageSet } from './safe-storage.js?v=1.0.36';
+import { storageGetJSON, storageSet } from './safe-storage.js?v=2.0.0';
 
-const STORAGE_KEY = 'imgverse:bulk';
+const STORAGE_KEY = 'sise:bulk';
 const PER_ROW = 6;
 const STATUS_POLL_MS = 15_000;
 const NAMES = { openverse: 'Openverse', unsplash: 'Unsplash', pexels: 'Pexels', pixabay: 'Pixabay', inaturalist: 'iNaturalist' };

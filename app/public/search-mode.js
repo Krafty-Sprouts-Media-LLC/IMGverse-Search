@@ -20,7 +20,7 @@ import {
     storageGetJSON,
     storageRemove,
     storageSet,
-} from './safe-storage.js?v=1.0.36';
+} from './safe-storage.js?v=2.0.0';
 
 const searchForm    = document.getElementById('search-form');
 const searchInput   = document.getElementById('search-input');
@@ -61,11 +61,12 @@ let batchSelections    = [];
 /** @type {{ img: object, name: string, error: string }[]} */
 let batchFailures      = [];
 
-const OPENED_STORAGE_KEY = 'imgverse:opened';
-const LEGACY_SAVED_STORAGE_KEY = 'imgverse:saved';
-const BATCH_KEYWORDS_KEY = 'imgverse:batch-keywords';
-const BATCH_SELECTIONS_KEY = 'imgverse:batch-selections';
-const BATCH_QUERY_KEY = 'imgverse:batch-query';
+// Keys were `imgverse:*` before the SISE rename; app.js migrates them on load.
+const OPENED_STORAGE_KEY = 'sise:opened';
+const LEGACY_SAVED_STORAGE_KEY = 'sise:saved';
+const BATCH_KEYWORDS_KEY = 'sise:batch-keywords';
+const BATCH_SELECTIONS_KEY = 'sise:batch-selections';
+const BATCH_QUERY_KEY = 'sise:batch-query';
 
 /** @returns {Set<string>} */
 function loadOpenedKeys() {

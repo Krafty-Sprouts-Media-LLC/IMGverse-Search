@@ -101,3 +101,36 @@ export function storageGetJSON(key, fallback, storage) {
     return fallback;
   }
 }
+
+/**
+ * Move every `fromPrefix` key to `toPrefix` (e.g. after a product rename),
+ * removing the old key. Data already saved under the new prefix wins.
+ *
+ * @param {string} fromPrefix
+ * @param {string} toPrefix
+ * @param {Storage|null} [storage]
+ * @returns {number} How many keys were moved.
+ */
+export function migrateKeys(fromPrefix, toPrefix, storage) {
+  const s = resolve(storage);
+  if (!s) return 0;
+  let moved = 0;
+  try {
+    const oldKeys = [];
+    for (let i = 0; i < s.length; i++) {
+      const key = s.key(i);
+      if (key && key.startsWith(fromPrefix)) oldKeys.push(key);
+    }
+    for (const oldKey of oldKeys) {
+      const newKey = toPrefix + oldKey.slice(fromPrefix.length);
+      if (s.getItem(newKey) == null) {
+        s.setItem(newKey, s.getItem(oldKey));
+        moved++;
+      }
+      s.removeItem(oldKey);
+    }
+  } catch (err) {
+    warnOnce('migrate', fromPrefix, err);
+  }
+  return moved;
+}
