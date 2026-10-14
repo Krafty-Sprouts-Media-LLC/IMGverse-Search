@@ -14,6 +14,7 @@ import {
   dedupeClientResults,
   imageKey,
   searchAllSources,
+  searchSources,
 } from '../../public/search-client.js';
 
 const server = (n, extra = {}) => Array.from({ length: n }, (_, i) => ({
@@ -60,6 +61,38 @@ describe('dedupeClientResults', () => {
     const a = { id: 'a', full: 'https://cdn.example/1.jpg' };
     const b = { id: 'b', full: 'https://cdn.example/1.jpg?w=200' };
     assert.deepEqual(dedupeClientResults([a, b]).map((r) => r.id), ['a']);
+  });
+});
+
+describe('searchSources', () => {
+  it('limits the server search to the chosen providers', async () => {
+    const fetchImpl = fakeFetch();
+    await searchSources({ q: 'salmon', serverProviders: ['pexels', 'pixabay'], openverse: false, fetchImpl });
+    assert.equal(fetchImpl.calls.length, 1);
+    assert.equal(new URL(fetchImpl.calls[0], 'http://x').searchParams.get('providers'), 'pexels,pixabay');
+  });
+
+  it('skips the server when no server provider is chosen', async () => {
+    const fetchImpl = fakeFetch();
+    const out = await searchSources({ q: 'salmon', serverProviders: [], openverse: true, fetchImpl });
+    assert.equal(fetchImpl.calls.some((u) => u.startsWith('/api/search')), false);
+    assert.deepEqual(out.providerStatus, { openverse: { status: 'ok' } });
+  });
+
+  it('reports Openverse as paused on HTTP 429 and keeps server results', async () => {
+    const fetchImpl = async (url) => (String(url).startsWith('/api/search')
+      ? { ok: true, status: 200, json: async () => ({ results: server(2), hasNext: false, providerStatus: { pexels: { status: 'ok' } } }) }
+      : { status: 429, text: async () => '{"detail":"throttled"}' });
+    const out = await searchSources({ q: 'salmon', fetchImpl });
+    assert.equal(out.openverseStatus, 429);
+    assert.deepEqual(out.providerStatus.openverse, { status: 'paused' });
+    assert.equal(out.results.length, 2);
+  });
+
+  it('reports a server failure without throwing', async () => {
+    const fetchImpl = fakeFetch({ serverStatus: 500, serverBody: { error: 'boom' } });
+    const out = await searchSources({ q: 'salmon', fetchImpl });
+    assert.equal(out.serverError, 'boom');
   });
 });
 

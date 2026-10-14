@@ -69,7 +69,65 @@ export async function fetchServerSearch({ q, page = 1, provider = '', orientatio
 }
 
 /**
- * Search the server and Openverse together; never throws for a server failure.
+ * Search any subset of providers. Never throws; failures are reported.
+ *
+ * @param {object}   params
+ * @param {string}   params.q
+ * @param {number}   [params.page]
+ * @param {string}   [params.orientation]
+ * @param {string[]|null} [params.serverProviders] null = all configured, [] = none.
+ * @param {boolean}  [params.openverse]       Also search Openverse from the browser.
+ * @param {Function} [params.fetchImpl]
+ * @param {Function} [params.openverseSearch] Injected for tests; defaults to searchOpenverse.
+ * @returns {Promise<{ results: object[], hasNext: boolean, providerStatus: object,
+ *   openverseStatus: number|null, openverseError: string, serverError: string }>}
+ *   `providerStatus.openverse` is 'paused' on HTTP 429, 'error' on other failures.
+ */
+export async function searchSources({
+  q,
+  page = 1,
+  orientation = '',
+  serverProviders = null,
+  openverse = true,
+  fetchImpl = globalThis.fetch,
+  openverseSearch = searchOpenverse,
+}) {
+  const wantServer = serverProviders === null || serverProviders.length > 0;
+  let serverError = '';
+
+  const serverPromise = wantServer
+    ? fetchServerSearch({ q, page, provider: (serverProviders || []).join(','), orientation, fetchImpl })
+      .catch((err) => {
+        serverError = err.message;
+        console.error('[IMGverse/search]', err.message);
+        return { results: [], hasNext: false, providerStatus: {} };
+      })
+    : Promise.resolve({ results: [], hasNext: false, providerStatus: {} });
+
+  const openversePromise = openverse
+    ? openverseSearch({ q, page, orientation, fetchImpl })
+    : Promise.resolve(null);
+
+  const [server, ov] = await Promise.all([serverPromise, openversePromise]);
+  const providerStatus = { ...server.providerStatus };
+
+  if (ov) {
+    if (ov.error) console.error('[IMGverse/openverse]', ov.error);
+    providerStatus.openverse = { status: ov.status === 429 ? 'paused' : (ov.error ? 'error' : 'ok') };
+  }
+
+  return {
+    results:         dedupeClientResults(weaveOpenverse(server.results, ov ? ov.images : [])),
+    hasNext:         mergeHasNext(server.hasNext, ov ? ov.hasNext : false),
+    providerStatus,
+    openverseStatus: ov ? ov.status : null,
+    openverseError:  ov ? ov.error || '' : '',
+    serverError,
+  };
+}
+
+/**
+ * Search tab: the provider pill decides the sources ('' = everything).
  *
  * @param {object}   params
  * @param {string}   params.q
@@ -88,28 +146,20 @@ export async function searchAllSources({
   fetchImpl = globalThis.fetch,
   openverse = searchOpenverse,
 }) {
-  const wantServer    = provider !== 'openverse';
-  const wantOpenverse = shouldFetchOpenverse(provider);
-
-  const serverPromise = wantServer
-    ? fetchServerSearch({ q, page, provider, orientation, fetchImpl }).catch((err) => {
-      console.error('[IMGverse/search]', err.message);
-      return { results: [], hasNext: false, providerStatus: {} };
-    })
-    : Promise.resolve({ results: [], hasNext: false, providerStatus: {} });
-
-  const openversePromise = wantOpenverse
-    ? openverse({ q, page, orientation, fetchImpl })
-    : Promise.resolve({ images: [], hasNext: false, error: '' });
-
-  const [server, ov] = await Promise.all([serverPromise, openversePromise]);
-
-  if (ov.error) console.error('[IMGverse/openverse]', ov.error);
-
+  const out = await searchSources({
+    q,
+    page,
+    orientation,
+    serverProviders: provider === 'openverse' ? [] : (provider ? [provider] : null),
+    openverse: shouldFetchOpenverse(provider),
+    fetchImpl,
+    openverseSearch: openverse,
+  });
+  const { openverse: _openverse, ...providerStatus } = out.providerStatus;
   return {
-    results:        dedupeClientResults(weaveOpenverse(server.results, ov.images)),
-    hasNext:        mergeHasNext(server.hasNext, ov.hasNext),
-    openverseError: ov.error || '',
-    providerStatus: server.providerStatus,
+    results:        out.results,
+    hasNext:        out.hasNext,
+    openverseError: out.openverseError,
+    providerStatus,
   };
 }

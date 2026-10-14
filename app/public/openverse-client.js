@@ -12,7 +12,7 @@
 
 'use strict';
 
-import { filterByOrientation } from './image-shape.js?v=1.0.36';
+import { filterByOrientation } from './image-shape.js?v=2.0.0';
 
 export { filterByOrientation };
 
@@ -162,7 +162,8 @@ export function mergeHasNext(serverHasNext, openverseHasNext) {
  * @param {number}   [params.pageSize]
  * @param {string}   [params.orientation]
  * @param {Function} [params.fetchImpl]
- * @returns {Promise<{ images: object[], hasNext: boolean, error: string }>}
+ * @returns {Promise<{ images: object[], hasNext: boolean, error: string, status: number }>}
+ *   `status` is the HTTP status (429 = rate limited), or 0 when the request failed outright.
  */
 export async function searchOpenverse({
   q,
@@ -199,6 +200,7 @@ export async function searchOpenverse({
         images: [],
         hasNext: false,
         error: messageFromFailedOpenverse(res.status, text),
+        status: res.status,
       };
     }
 
@@ -207,6 +209,7 @@ export async function searchOpenverse({
         images: [],
         hasNext: false,
         error: messageFromFailedOpenverse(res.status, text),
+        status: res.status,
       };
     }
 
@@ -217,12 +220,13 @@ export async function searchOpenverse({
     const pageCount = Number(data.page_count) || 0;
     const hasNext = pageCount > 0 ? pageNum < pageCount : images.length >= size;
 
-    return { images, hasNext, error: '' };
+    return { images, hasNext, error: '', status: 200 };
   } catch (err) {
     return {
       images: [],
       hasNext: false,
       error: err?.message || 'Openverse search failed.',
+      status: 0,
     };
   }
 }

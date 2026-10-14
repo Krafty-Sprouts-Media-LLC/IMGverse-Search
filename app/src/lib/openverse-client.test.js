@@ -22,6 +22,21 @@ import {
   weaveOpenverse,
 } from '../../public/openverse-client.js';
 
+describe('searchOpenverse status', () => {
+  it('reports the HTTP status of a rate-limited request', async () => {
+    const fetchImpl = async () => ({ status: 429, text: async () => '{"detail":"Request was throttled."}' });
+    const out = await searchOpenverse({ q: 'cat', fetchImpl });
+    assert.equal(out.status, 429);
+    assert.match(out.error, /429/);
+  });
+  it('reports 200 on success and 0 when the request fails outright', async () => {
+    const ok = await searchOpenverse({ q: 'cat', fetchImpl: async () => ({ status: 200, text: async () => '{"results":[],"page_count":0}' }) });
+    assert.equal(ok.status, 200);
+    const down = await searchOpenverse({ q: 'cat', fetchImpl: async () => { throw new Error('offline'); } });
+    assert.equal(down.status, 0);
+  });
+});
+
 describe('capPageSize', () => {
   it('caps anonymous page size at 20', () => {
     assert.equal(capPageSize(50), 20);
