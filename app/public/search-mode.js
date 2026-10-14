@@ -438,7 +438,9 @@ export function initSearchMode() {
 }
 
 function startNewSearch(q) {
-    const queryChanged = q !== currentQuery;
+    // Only switching from one term to another clears the queue: filenames
+    // pasted before the first search belong to that search.
+    const queryChanged = currentQuery !== '' && q !== currentQuery;
 
     searchToken++;
     currentQuery = q;
@@ -538,7 +540,7 @@ function renderCards(results) {
                 decoding="async"
                 style="${aspectStyle}"
             >
-            <div class="card-overlay" aria-hidden="true">
+            <div class="card-overlay">
                 <div class="card-top">
                     <span class="provider-badge">${escHtml(img.provider)}</span>
                 </div>

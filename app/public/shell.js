@@ -42,7 +42,8 @@ export function initShell({ doc = globalThis.document, win = globalThis.window }
   tabs.forEach((btn, i) => {
     btn.addEventListener('click', () => {
       show(btn.dataset.tab);
-      win.history.replaceState(null, '', `#${btn.dataset.tab}`);
+      // A real history entry, so the browser Back button returns to the previous tab.
+      if (tabFromHash(win.location.hash) !== btn.dataset.tab) win.location.hash = btn.dataset.tab;
     });
     btn.addEventListener('keydown', (e) => {
       const last = tabs.length - 1;

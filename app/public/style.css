@@ -20,7 +20,7 @@
     --muted:     oklch(0.50 0.010 12);
     --line:      oklch(0.915 0.006 12);
     --line-2:    oklch(0.86 0.008 12);
-    --brand:     oklch(0.60 0.215 12);
+    --brand:     oklch(0.58 0.215 12);   /* ≥ 4.5:1 for white button/badge text */
     --brand-ink: oklch(0.50 0.19 12);
     --brand-bg:  oklch(0.955 0.03 12);
     --warn:      oklch(0.50 0.12 65);
@@ -382,8 +382,7 @@ a { color: inherit; }
     .main { padding: 0 16px 48px; }
     .grid { columns: 2 150px; }
     /* No hover on touch: keep card actions visible. */
-    .card-overlay { opacity: 1; background: linear-gradient(to bottom, transparent 55%, oklch(0 0 0 / .6)); }
-    .card-top { display: none; }
+    .card-overlay { opacity: 1; background: linear-gradient(to bottom, oklch(0 0 0 / .3), transparent 25%, transparent 55%, oklch(0 0 0 / .6)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
