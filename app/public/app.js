@@ -20,6 +20,12 @@ import {
     formatBatchFinishMessage,
     messageFromDownloadResponse,
 } from './batch-helpers.js?v=1.0.34';
+import {
+    storageGet,
+    storageGetJSON,
+    storageRemove,
+    storageSet,
+} from './safe-storage.js?v=1.0.36';
 
 const searchForm    = document.getElementById('search-form');
 const searchInput   = document.getElementById('search-input');
@@ -68,24 +74,26 @@ const BATCH_QUERY_KEY = 'imgverse:batch-query';
 
 /** @returns {Set<string>} */
 function loadOpenedKeys() {
-    try {
-        let raw = sessionStorage.getItem(OPENED_STORAGE_KEY);
-        if (!raw) {
-            raw = sessionStorage.getItem(LEGACY_SAVED_STORAGE_KEY);
-            if (raw) {
-                sessionStorage.setItem(OPENED_STORAGE_KEY, raw);
-                sessionStorage.removeItem(LEGACY_SAVED_STORAGE_KEY);
-            }
+    let raw = storageGet(OPENED_STORAGE_KEY);
+    if (!raw) {
+        raw = storageGet(LEGACY_SAVED_STORAGE_KEY);
+        if (raw) {
+            storageSet(OPENED_STORAGE_KEY, raw);
+            storageRemove(LEGACY_SAVED_STORAGE_KEY);
         }
-        return new Set(raw ? JSON.parse(raw) : []);
-    } catch {
-        return new Set();
     }
+    let keys = [];
+    try {
+        keys = raw ? JSON.parse(raw) : [];
+    } catch {
+        keys = [];
+    }
+    return new Set(Array.isArray(keys) ? keys : []);
 }
 
 /** @param {Set<string>} keys */
 function persistOpenedKeys(keys) {
-    sessionStorage.setItem(OPENED_STORAGE_KEY, JSON.stringify([...keys]));
+    storageSet(OPENED_STORAGE_KEY, JSON.stringify([...keys]));
 }
 
 /** Stable key for the same image across pages (matches server dedupe logic). */
@@ -144,37 +152,32 @@ function parseFilenames(text) {
 }
 
 function persistBatchKeywords() {
-    sessionStorage.setItem(BATCH_KEYWORDS_KEY, batchFilenames.value);
-    if (currentQuery) sessionStorage.setItem(BATCH_QUERY_KEY, currentQuery);
+    storageSet(BATCH_KEYWORDS_KEY, batchFilenames.value);
+    if (currentQuery) storageSet(BATCH_QUERY_KEY, currentQuery);
 }
 
 function persistBatchSelections() {
-    sessionStorage.setItem(BATCH_SELECTIONS_KEY, JSON.stringify(batchSelections));
-    if (currentQuery) sessionStorage.setItem(BATCH_QUERY_KEY, currentQuery);
+    storageSet(BATCH_SELECTIONS_KEY, JSON.stringify(batchSelections));
+    if (currentQuery) storageSet(BATCH_QUERY_KEY, currentQuery);
 }
 
 function resetBatchQueue() {
     batchSelections = [];
     batchFilenames.value = '';
-    sessionStorage.removeItem(BATCH_KEYWORDS_KEY);
-    sessionStorage.removeItem(BATCH_SELECTIONS_KEY);
-    sessionStorage.removeItem(BATCH_QUERY_KEY);
+    storageRemove(BATCH_KEYWORDS_KEY);
+    storageRemove(BATCH_SELECTIONS_KEY);
+    storageRemove(BATCH_QUERY_KEY);
     batchStatus.textContent = '';
     clearBatchFailures();
     updateBatchPanel();
 }
 
 function loadBatchState() {
-    try {
-        const keywords = sessionStorage.getItem(BATCH_KEYWORDS_KEY);
-        if (keywords != null) batchFilenames.value = keywords;
+    const keywords = storageGet(BATCH_KEYWORDS_KEY);
+    if (keywords != null) batchFilenames.value = keywords;
 
-        const raw = sessionStorage.getItem(BATCH_SELECTIONS_KEY);
-        batchSelections = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(batchSelections)) batchSelections = [];
-    } catch {
-        batchSelections = [];
-    }
+    const saved = storageGetJSON(BATCH_SELECTIONS_KEY, []);
+    batchSelections = Array.isArray(saved) ? saved : [];
     updateBatchPanel();
 }
 
