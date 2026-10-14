@@ -1,9 +1,40 @@
 # Changelog
 
-All notable changes to IMGverse Search will be documented in this file.
+All notable changes to SISE (formerly IMGverse Search) will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.0.0] - 14/10/2026
+
+### Added
+- **Bulk keywords tab.** Paste a keyword list ("can you freeze cooked salmon", "what to serve with tri tip"…) and get one row per keyword with a cleaned, editable search query, the best image pre-picked (right shape, at least 1000px), and **Download** saves one file per keyword named after the keyword (`what to serve with tri tip.jpg`). Up to 1,000 keywords per run.
+  - Only rows within 10 of where you are reading are searched (2 at a time), so provider limits are not spent on rows you never reach.
+  - Needs review / Picked / Skipped filters, Retry and Skip for rows with no results, "+N more" images, keyboard shortcuts (J/K rows, 1–9 pick, ←/→ change, S skip, E edit query), Pause / Resume.
+  - Shape and pixel size on every thumbnail; images under 1000px flagged.
+  - Progress, provider budgets and pauses are shown as they happen ("Pexels limit reached, back in 0:41. Other providers keep filling rows."); rows waiting on a paused provider are filled in automatically when it resumes.
+  - The run survives a reload: keywords, query edits, picks, skips, orientation and position come back.
+- **Provider rate budgets on the server.** Every call to Pexels (200/hour), Unsplash (5,000/hour), Pixabay (100/minute) and iNaturalist (60/minute) is counted; provider rate-limit headers and HTTP 429 pause a provider instead of hammering it. Limits are overridable with `<PROVIDER>_RATE_LIMIT`. New `GET /api/providers/status`; `/api/search` now returns `providerStatus`.
+- Openverse rate limits (HTTP 429) are detected in the browser: Openverse rests for 60 seconds and rows are topped up afterwards.
+
+### Changed
+- **Renamed to SISE (Stock image search engine).** New name in the UI, page title, logs (`[SISE/...]`, was `[IMGverse/...]`), cache keys and User-Agent. Saved browser state (batch queue, Opened marks) moves over automatically on first load.
+- **Redesigned interface**: Search and Bulk keywords tabs (deep-linkable as `#search` / `#bulk`, Back button works), sidebar + results layout, calmer colours with the brand pink for actions and selection, keyboard-friendly tabs and filters, readable on phones.
+- Search results are cached per provider (1 hour), so a paused or failing provider is never cached as "no images".
+- Batch downloads read the Web / Full size choice once when the download starts (it used to be read per file).
+- Every provider result is also checked against the chosen orientation, which fixes Pixabay "Square" returning all shapes.
+- Providers without an API key are skipped entirely (no wasted budget, not listed in the UI).
+
+### Fixed
+- Clicking a provider or orientation filter while a search was loading left the results empty.
+- After a reload, searching the same term again wiped the restored batch queue.
+- Filenames pasted into the batch panel before the first search were wiped by that search.
+- Provider failures (HTTP errors, timeouts) were reported as "no results"; they are now reported as errors and logged.
+- Screen readers now announce the "Open full image" link on result cards; white text on the brand colour meets 4.5:1 contrast.
+
+### Deployment notes
+- No configuration changes are required. Deployment identifiers were kept on purpose: GHCR image names (`…/imgverse-search`), the Redis volume default (`imgverse_redis_data` / `STACK_SLUG=imgverse`), `meta.json` `id` and GitHub URLs. Rename the GitHub repository first if you want those to change too.
+- Old whole-response search cache keys (`imgverse:search:*`) simply expire within an hour.
 
 ## [1.0.36] - 14/10/2026
 
