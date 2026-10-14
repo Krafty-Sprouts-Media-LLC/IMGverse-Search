@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Bulk keywords: large preview.** **Preview** on a row, double-click a thumbnail, or press `Space`: the image large (Openverse uses its full file), with title, photographer, provider, size and shape; `←` `→` browse, `Enter` selects / unselects, `Esc` closes. (#4)
 
 ### Fixed
+- **Downloads no longer fail with "502 Bad Gateway" after a few images.** The image library kept about 70 MB of memory after every download, so the app was killed for running out of memory after 3–4 large images and nginx showed its own 502 page for the next keywords while it restarted. Its cache is now off (each image is only processed once, so it never helped); 16 downloads in a row now stay at about 80 MB between images. (#9)
 - Bulk keywords: `←` `→` now scroll the thumbnail strip so the selected image stays in view, revealing more images when you move past the last one, and never unselect at either end. (#5)
 
 ### Changed
