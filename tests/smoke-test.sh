@@ -85,6 +85,15 @@ SEARCH_RESPONSE=$(curl -s "${BASE_URL}/api/search?q=cat")
 echo "${SEARCH_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'results' in d" \
     || fail "/api/search did not return valid JSON with results key"
 pass "/api/search returns valid JSON"
+echo "${SEARCH_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'providerStatus' in d" \
+    || fail "/api/search response has no providerStatus"
+pass "/api/search includes providerStatus"
+
+info "Testing /api/providers/status..."
+STATUS_RESPONSE=$(curl -s "${BASE_URL}/api/providers/status")
+echo "${STATUS_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); assert all(k in d for k in ('pexels','unsplash','pixabay','inaturalist'))" \
+    || fail "/api/providers/status is missing providers"
+pass "/api/providers/status lists provider budgets"
 
 info "Testing /proxy with an Openverse image URL..."
 # Use a known stable public JPEG from a whitelisted domain for the proxy test

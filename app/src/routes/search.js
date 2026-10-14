@@ -1,8 +1,8 @@
 // =============================================================================
 // src/routes/search.js
 // IMGverse Search — GET /api/search route.
-// Checks Redis cache first, then fans out to all providers via searchAll.
-// Caches results for 1 hour to respect provider rate limits.
+// Fans out to all providers via searchAll, which caches per provider and
+// applies rate budgets; the response reports each provider's status.
 //
 // @package IMGverse-Search
 // @since   1.0.0
@@ -12,7 +12,6 @@
 
 import { Router } from 'express';
 import { searchAll } from '../providers/index.js';
-import { get, set } from '../cache.js';
 
 const router = Router();
 
@@ -42,32 +41,16 @@ router.get('/', async (req, res) => {
     ? req.query.orientation
     : '';
 
-  const cacheKey = `imgverse:search:${q}:${page}:${providers.sort().join(',')}:${orientation}`;
+  const { results, providerStatus } = await searchAll(q, page, providers, orientation);
 
-  // Cache hit — return instantly
-  const cached = await get(cacheKey);
-  if (cached) {
-    return res.json({ ...cached, cached: true });
-  }
-
-  // Cache miss — fan out to all providers
-  const results = await searchAll(q, page, providers, orientation);
-
-  const payload = {
+  return res.json({
     total:   results.length,
     page,
     orientation,
     results,
     hasNext: results.length >= 10,
-  };
-
-  // Cache successful searches only — empty results are often transient (timeout,
-  // upstream outage) and must not be pinned in Redis for an hour.
-  if (results.length > 0) {
-    await set(cacheKey, payload, 3600);
-  }
-
-  return res.json(payload);
+    providerStatus,
+  });
 });
 
 export default router;

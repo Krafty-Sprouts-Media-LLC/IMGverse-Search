@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import searchRouter from './routes/search.js';
 import proxyRouter from './routes/proxy.js';
 import downloadRouter from './routes/download.js';
+import providersRouter from './routes/providers.js';
 import { shutdownExiftool } from './lib/attribution.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -39,6 +40,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // Routes
 // ---------------------------------------------------------------------------
 app.use('/api/search', searchRouter);
+app.use('/api/providers', providersRouter);
 app.use('/proxy', proxyRouter);
 app.use('/download', downloadRouter);
 
