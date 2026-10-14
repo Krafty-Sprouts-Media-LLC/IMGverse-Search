@@ -124,13 +124,83 @@
     </div>
 
     <!-- ========================= BULK KEYWORDS ========================= -->
-    <div class="view view--single" id="view-bulk" role="tabpanel" aria-labelledby="tab-bulk" hidden>
-        <main class="main">
-            <div class="empty-state">
-                <h2>One image per keyword, named after the keyword</h2>
-                <p>Bulk keywords is being built for this release.</p>
+    <div class="view" id="view-bulk" role="tabpanel" aria-labelledby="tab-bulk" hidden>
+
+        <aside class="sidebar" aria-label="Bulk settings">
+            <section class="side-section">
+                <label class="label" for="bulk-keywords">Keywords <span class="label__aside" id="bulk-kw-count">0</span></label>
+                <textarea id="bulk-keywords" class="textarea" rows="10" spellcheck="false" placeholder="One keyword per line&#10;can you freeze cooked salmon&#10;what to serve with tri tip"></textarea>
+                <p class="hint">Each line becomes one row and one file named after the keyword. The search query is cleaned automatically; you can edit it per row. Only the next 10 rows ahead of you are searched, so provider limits are not spent on rows you haven't reached.</p>
+            </section>
+
+            <section class="side-section">
+                <span class="label">Providers <span class="label__aside">requests left</span></span>
+                <div id="bulk-providers" class="pstats"></div>
+            </section>
+
+            <section class="side-section">
+                <span class="label" id="bulk-orient-label">Orientation <span class="label__aside">every row</span></span>
+                <div class="seg seg--wrap" id="bulk-orient" role="group" aria-labelledby="bulk-orient-label">
+                    <button type="button" data-orient="" aria-pressed="false">Any</button>
+                    <button type="button" data-orient="landscape" aria-pressed="true"><span class="shape-ico shape-ico--landscape" aria-hidden="true"></span>Wide</button>
+                    <button type="button" data-orient="portrait" aria-pressed="false"><span class="shape-ico shape-ico--portrait" aria-hidden="true"></span>Tall</button>
+                    <button type="button" data-orient="square" aria-pressed="false"><span class="shape-ico shape-ico--square" aria-hidden="true"></span>Square</button>
+                </div>
+                <p class="legend"><span class="legend__swatch" aria-hidden="true"></span>Under 1000px: flagged, skipped by auto-pick</p>
+            </section>
+
+            <section class="side-section">
+                <span class="label" id="bulk-size-label">Download size</span>
+                <div class="seg" id="bulk-size" role="group" aria-labelledby="bulk-size-label">
+                    <button type="button" data-size="web" aria-pressed="true">Web 1920px</button>
+                    <button type="button" data-size="full" aria-pressed="false">Full</button>
+                </div>
+            </section>
+
+            <section class="side-section">
+                <button type="button" id="bulk-run" class="btn btn-primary btn-block" disabled>Search keywords</button>
+                <div class="progress" aria-hidden="true"><span id="bulk-progress-bar"></span></div>
+                <p class="hint" id="bulk-progress-text">Nothing searched yet.</p>
+            </section>
+        </aside>
+
+        <div class="main">
+            <div class="bulk-toolbar">
+                <div class="seg seg--inline" id="bulk-filter" role="group" aria-label="Filter rows">
+                    <button type="button" data-filter="all" aria-pressed="true">All<span class="seg__n" id="bulk-n-all">0</span></button>
+                    <button type="button" data-filter="review" aria-pressed="false">Needs review<span class="seg__n" id="bulk-n-review">0</span></button>
+                    <button type="button" data-filter="picked" aria-pressed="false">Picked<span class="seg__n" id="bulk-n-picked">0</span></button>
+                    <button type="button" data-filter="skipped" aria-pressed="false">Skipped<span class="seg__n" id="bulk-n-skipped">0</span></button>
+                </div>
+                <div class="keys" aria-hidden="true"><span><kbd>J</kbd> <kbd>K</kbd> row</span><span><kbd>1</kbd>–<kbd>9</kbd> pick</span><span><kbd>←</kbd> <kbd>→</kbd> change</span><span><kbd>S</kbd> skip</span><span><kbd>E</kbd> edit</span></div>
+                <button type="button" id="bulk-download" class="btn btn-primary" disabled>Download 0</button>
+
+                <div class="runbar" aria-live="polite">
+                    <span class="runbar__state"><span class="pulse pulse--idle" id="bulk-run-pulse" aria-hidden="true"></span><span id="bulk-run-state">Idle</span></span>
+                    <span id="bulk-run-detail">Paste keywords and press Search keywords.</span>
+                    <span class="runbar__note" id="bulk-run-note"></span>
+                    <button type="button" id="bulk-pause" class="btn btn-secondary btn-sm" disabled>Pause</button>
+                </div>
+                <div class="bulk-dl">
+                    <p id="bulk-dl-status" class="batch-status" aria-live="polite"></p>
+                    <ul id="bulk-dl-failures" class="batch-failures hidden"></ul>
+                    <button type="button" id="bulk-retry" class="btn btn-secondary btn-sm hidden">Retry failed</button>
+                </div>
             </div>
-        </main>
+
+            <div id="bulk-rows" class="rows"></div>
+
+            <div id="bulk-blank" class="empty-state">
+                <h2>One image per keyword, named after the keyword</h2>
+                <p>Paste your keyword list on the left and press <strong>Search keywords</strong>.</p>
+                <ol class="steps">
+                    <li>Every keyword gets its own row with its own results.</li>
+                    <li>The best match is picked for you. Click another image to swap it.</li>
+                    <li>Rows with no results land in <strong>Needs review</strong>: edit the query and search again.</li>
+                    <li>Download saves one file per picked row, named like <span class="mono">what to serve with tri tip.jpg</span>.</li>
+                </ol>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="/app.js?v=2.0.0"></script>
