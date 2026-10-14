@@ -14,3 +14,13 @@
 # Node
 node_modules/
 npm-debug.log*
+
+# AI agent tooling
+.agents/
+
+# Local design mockups and planning notes
+/mock.html
+/mock_v2.html
+/demo-bulk-keywords.html
+/implementation_plan.md
+/IMGverse-Search-Plan.md
