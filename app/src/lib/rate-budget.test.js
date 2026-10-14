@@ -38,7 +38,7 @@ afterEach(() => {
 describe('DEFAULT_LIMITS', () => {
   it('matches the documented provider limits', () => {
     assert.deepEqual(DEFAULT_LIMITS.pexels,      { limit: 200,  windowMs: HOUR,   per: 'hour' });
-    assert.deepEqual(DEFAULT_LIMITS.unsplash,    { limit: 5000, windowMs: HOUR,   per: 'hour' });
+    assert.deepEqual(DEFAULT_LIMITS.unsplash,    { limit: 50,   windowMs: HOUR,   per: 'hour' });
     assert.deepEqual(DEFAULT_LIMITS.pixabay,     { limit: 100,  windowMs: MINUTE, per: 'minute' });
     assert.deepEqual(DEFAULT_LIMITS.inaturalist, { limit: 60,   windowMs: MINUTE, per: 'minute' });
   });
@@ -49,7 +49,7 @@ describe('limitsFromEnv', () => {
     const limits = limitsFromEnv({ PEXELS_RATE_LIMIT: '50', UNSPLASH_RATE_LIMIT: 'lots', PIXABAY_RATE_LIMIT: '-3' });
     assert.equal(limits.pexels.limit, 50);
     assert.equal(limits.pexels.windowMs, HOUR);
-    assert.equal(limits.unsplash.limit, 5000);
+    assert.equal(limits.unsplash.limit, 50);
     assert.equal(limits.pixabay.limit, 100);
   });
 });
@@ -123,7 +123,31 @@ describe('createRateBudget headers', () => {
     b.observe('unsplash', 200, new Headers({ 'X-Ratelimit-Limit': '50', 'X-Ratelimit-Remaining': '0' }));
     const gate = b.canCall('unsplash');
     assert.equal(gate.ok, false);
-    assert.equal(gate.resumeAt, 1_000_000 + HOUR);
+    assert.equal(gate.resumeAt, 1_000_000 + 5 * MINUTE);
+  });
+
+  it('lets one Unsplash probe through when the short pause ends, and re-pauses if still empty', () => {
+    const c = clock();
+    const b = createRateBudget({ limits: { unsplash: { limit: 50, windowMs: HOUR, per: 'hour' } }, now: c.now });
+    b.observe('unsplash', 200, new Headers({ 'X-Ratelimit-Limit': '50', 'X-Ratelimit-Remaining': '0' }));
+    assert.equal(b.canCall('unsplash').ok, false);
+    c.advance(5 * MINUTE);
+    assert.equal(b.canCall('unsplash').ok, true);
+    b.recordCall('unsplash');
+    b.observe('unsplash', 429, new Headers());
+    assert.equal(b.canCall('unsplash').ok, false);
+    assert.equal(b.canCall('unsplash').resumeAt, c.now() + 5 * MINUTE);
+  });
+
+  it('resumes Unsplash normally once the probe shows requests left', () => {
+    const c = clock();
+    const b = createRateBudget({ limits: { unsplash: { limit: 50, windowMs: HOUR, per: 'hour' } }, now: c.now });
+    b.observe('unsplash', 200, new Headers({ 'X-Ratelimit-Limit': '50', 'X-Ratelimit-Remaining': '0' }));
+    c.advance(5 * MINUTE);
+    b.recordCall('unsplash');
+    b.observe('unsplash', 200, new Headers({ 'X-Ratelimit-Limit': '50', 'X-Ratelimit-Remaining': '49' }));
+    assert.equal(b.canCall('unsplash').ok, true);
+    assert.equal(b.snapshot().unsplash.remaining, 49);
   });
 
   it('pauses Pixabay until its reset seconds when remaining hits 0', () => {

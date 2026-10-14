@@ -25,6 +25,7 @@ export function buildDownloadParams(img, name, size = 'web') {
   if (img.provider)  params.set('provider', img.provider);
   if (img.license)   params.set('license', img.license);
   if (img.sourceUrl) params.set('sourceUrl', img.sourceUrl);
+  if (img.downloadLocation) params.set('downloadLocation', img.downloadLocation);
   return params;
 }
 

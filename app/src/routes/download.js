@@ -20,6 +20,7 @@ import {
   sanitizeDownloadName,
 } from '../lib/image-proxy.js';
 import { parseAttributionFromQuery } from '../lib/attribution.js';
+import { trackDownload } from '../providers/unsplash.js';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ const router = Router();
  *   license    {string}  Licence name (optional)
  *   sourceUrl  {string}  Link to original image page (optional)
  *   size       {string}  `web` (default, max width resize) | `full` (provider original dimensions)
+ *   downloadLocation {string} Unsplash `links.download_location`, pinged after a successful download (optional)
  */
 router.get('/', async (req, res) => {
   const format = parseOutputFormat(req.query.fmt);
@@ -52,6 +54,11 @@ router.get('/', async (req, res) => {
       encode,
     });
     const ext = formatExtension(format);
+
+    // Unsplash API guidelines: report the download. Never blocks or fails the file.
+    if (req.query.provider === 'unsplash' && req.query.downloadLocation) {
+      trackDownload(String(req.query.downloadLocation));
+    }
 
     res.set({
       'Content-Type':        contentType,

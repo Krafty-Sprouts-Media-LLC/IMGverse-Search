@@ -137,6 +137,7 @@ export function dedupeResults(results) {
  *   creditUrl:  string  — link to author profile
  *   license:    string  — licence name
  *   sourceUrl:  string  — link to original image page
+ *   downloadLocation?: string — Unsplash only: URL to ping when the image is downloaded
  * }
  *
  * @param {object} fields - Raw fields from the provider.
@@ -154,6 +155,7 @@ export function normalize({
   creditUrl = '',
   license = '',
   sourceUrl = '',
+  downloadLocation = '',
 }) {
   return {
     id:        `${provider}-${id}`,
@@ -167,5 +169,7 @@ export function normalize({
     creditUrl,
     license,
     sourceUrl,
+    // Only Unsplash sets this; other providers' results stay unchanged.
+    ...(downloadLocation ? { downloadLocation } : {}),
   };
 }

@@ -49,7 +49,7 @@ There are two ways. Both end with the same three containers (`nginx`, `app`, `re
 
 Before you start, have these ready (all free, all optional — a provider without a key is skipped):
 
-- Unsplash key: <https://unsplash.com/developers> (apply for **Production** to get 5,000 requests/hour instead of 50)
+- Unsplash key: <https://unsplash.com/developers> (apply for **Production** to get 1,000 requests/hour instead of 50)
 - Pexels key: <https://www.pexels.com/api/>
 - Pixabay key: <https://pixabay.com/api/docs/>
 - A domain or subdomain pointing at your Dokploy server's IP (an `A` record), e.g. `images.example.com`
@@ -144,7 +144,7 @@ Only the three API keys matter for most installs; everything else has a sensible
 | `DOWNLOAD_MAX_WIDTH` | No | `1920` | Longest side of downloaded files when **Web** size is chosen |
 | `DOWNLOAD_JPEG_QUALITY` | No | `82` | JPEG quality (1–100) of downloaded files |
 | `PEXELS_RATE_LIMIT` | No | `200` | Pexels requests per hour SISE allows itself (raise if Pexels granted you more) |
-| `UNSPLASH_RATE_LIMIT` | No | `5000` | Unsplash requests per hour (Unsplash's own header wins if it reports a different limit) |
+| `UNSPLASH_RATE_LIMIT` | No | `50` | Unsplash requests per hour (Unsplash's own header wins if it reports a different limit) |
 | `PIXABAY_RATE_LIMIT` | No | `100` | Pixabay requests per minute |
 | `INATURALIST_RATE_LIMIT` | No | `60` | iNaturalist requests per minute |
 | `SISE_VERSION` | No | `latest` | Template deploys only: which image version to pull (e.g. `2.0.2`) |

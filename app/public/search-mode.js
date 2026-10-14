@@ -522,6 +522,9 @@ function updatePagination(totalOnPage) {
     pageNext.disabled = !hasNextPage;
 }
 
+// Unsplash API guidelines: credit links back to Unsplash carry the app name.
+const UNSPLASH_URL = 'https://unsplash.com/?utm_source=sise&utm_medium=referral';
+
 function renderCards(results) {
     results.forEach((img) => {
         const figure = document.createElement('figure');
@@ -546,7 +549,7 @@ function renderCards(results) {
                     <span class="provider-badge">${escHtml(img.provider)}</span>
                 </div>
                 <div class="card-bottom">
-                    ${img.credit ? `<p class="card-credit">Photo by <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a></p>` : ''}
+                    ${img.credit ? `<p class="card-credit">Photo by <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a>${img.provider === 'unsplash' ? ` on <a href="${UNSPLASH_URL}" target="_blank" rel="noopener">Unsplash</a>` : ''}</p>` : ''}
                     <a
                         class="btn-open${opened ? ' btn-open--opened' : ''}"
                         href="${escHtml(img.full)}"

@@ -14,9 +14,13 @@
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
+// Unsplash/Pixabay-style providers that report no reset time: we can only guess
+// when quota returns, so pause briefly and probe instead of blocking a full window.
+const PROBE_MS = 5 * MINUTE;
+
 export const DEFAULT_LIMITS = Object.freeze({
   pexels:      Object.freeze({ limit: 200,  windowMs: HOUR,   per: 'hour' }),
-  unsplash:    Object.freeze({ limit: 5000, windowMs: HOUR,   per: 'hour' }),
+  unsplash:    Object.freeze({ limit: 50,   windowMs: HOUR,   per: 'hour' }), // Demo; Production is 1000 (header wins)
   pixabay:     Object.freeze({ limit: 100,  windowMs: MINUTE, per: 'minute' }),
   inaturalist: Object.freeze({ limit: 60,   windowMs: MINUTE, per: 'minute' }),
 });
@@ -77,6 +81,12 @@ export function createRateBudget({ limits = DEFAULT_LIMITS, now = () => Date.now
     if (!limits[name]) return { ok: true };
     const s = entry(name);
     if (s.pausedUntil > now()) return { ok: false, resumeAt: s.pausedUntil };
+    if (s.pausedUntil) {
+      // A pause just ended: let one probe through. Its response headers decide
+      // whether we are really out of quota (observe() re-pauses if so).
+      s.pausedUntil = 0;
+      s.used = Math.min(s.used, s.limit - 1);
+    }
     if (s.used >= s.limit) return { ok: false, resumeAt: s.windowStart + limits[name].windowMs };
     return { ok: true };
   }
@@ -106,14 +116,16 @@ export function createRateBudget({ limits = DEFAULT_LIMITS, now = () => Date.now
       if (remaining != null) s.used = Math.max(0, s.limit - remaining);
       if (reset != null) resetAt = t + reset * 1000; // Pixabay: seconds until reset
       if (remaining === 0) {
-        s.pausedUntil = Math.max(s.pausedUntil, resetAt ?? s.windowStart + cfg.windowMs);
+        s.pausedUntil = Math.max(s.pausedUntil, resetAt ?? t + Math.min(PROBE_MS, cfg.windowMs));
       }
     }
 
     if (status === 429) {
       const until = retryAfter != null
         ? t + retryAfter * 1000
-        : (resetAt ?? s.windowStart + cfg.windowMs);
+        : (resetAt ?? (HEADERS_MATCH_WINDOW.has(name)
+          ? t + Math.min(PROBE_MS, cfg.windowMs)
+          : s.windowStart + cfg.windowMs));
       s.pausedUntil = Math.max(s.pausedUntil, until);
       console.warn(`[SISE/budget] ${name} returned 429, paused until ${new Date(s.pausedUntil).toISOString()}`);
     }

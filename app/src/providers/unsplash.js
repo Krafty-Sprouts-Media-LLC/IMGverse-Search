@@ -16,6 +16,60 @@ import { normalize } from '../utils.js';
 
 const BASE = 'https://api.unsplash.com/search/photos';
 
+// Unsplash API guidelines: every link back to Unsplash carries the app name.
+const UTM = { utm_source: 'sise', utm_medium: 'referral' };
+
+// Only this exact endpoint shape is ever called with our key (see trackDownload).
+const DOWNLOAD_PATH = /^\/photos\/[A-Za-z0-9_-]+\/download$/;
+
+/** Add Unsplash's required referral params to a link. */
+function withUtm(url) {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    for (const [k, v] of Object.entries(UTM)) parsed.searchParams.set(k, v);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Tell Unsplash a photo was downloaded (required by their API guidelines).
+ * `downloadLocation` arrives from the browser, so only an https
+ * api.unsplash.com /photos/<id>/download URL is ever requested — anything else
+ * would let a caller aim our API key at another host.
+ *
+ * @param {string} downloadLocation - `links.download_location` from the search result.
+ * @param {object} [options]        - { fetchImpl }
+ * @returns {Promise<boolean>} True when Unsplash accepted the ping.
+ */
+export async function trackDownload(downloadLocation, { fetchImpl = fetch } = {}) {
+  if (!process.env.UNSPLASH_KEY) return false;
+
+  let url;
+  try {
+    url = new URL(downloadLocation);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:' || url.hostname !== 'api.unsplash.com' || !DOWNLOAD_PATH.test(url.pathname)) {
+    return false;
+  }
+
+  try {
+    const res = await fetchImpl(url, {
+      headers: { Authorization: `Client-ID ${process.env.UNSPLASH_KEY}`, 'Accept-Version': 'v1' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) console.error(`[SISE/unsplash] download tracking HTTP ${res.status} for ${url.pathname}`);
+    return res.ok;
+  } catch (err) {
+    console.error(`[SISE/unsplash] download tracking failed for ${url.pathname}:`, err.message);
+    return false;
+  }
+}
+
 /**
  * Search Unsplash for images matching the given query.
  * Returns empty array if UNSPLASH_KEY is not set.
@@ -59,9 +113,10 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
         height:    item.height,
         alt:       item.alt_description || item.description || '',
         credit:    item.user?.name || '',
-        creditUrl: item.user?.links?.html || '',
+        creditUrl: withUtm(item.user?.links?.html),
         license:   'Unsplash License',
-        sourceUrl: item.links?.html || '',
+        sourceUrl: withUtm(item.links?.html),
+        downloadLocation: item.links?.download_location || '',
       })
     );
   } catch (err) {

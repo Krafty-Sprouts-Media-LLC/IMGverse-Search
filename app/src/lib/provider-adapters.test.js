@@ -10,7 +10,7 @@
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { search as unsplash } from '../providers/unsplash.js';
+import { search as unsplash, trackDownload } from '../providers/unsplash.js';
 import { search as pexels } from '../providers/pexels.js';
 import { search as pixabay } from '../providers/pixabay.js';
 import { search as inaturalist } from '../providers/inaturalist.js';
@@ -72,6 +72,30 @@ describe('provider adapters', () => {
     await unsplash('corn', 1, 'square', { fetchImpl, onResponse: () => { reported += 1; } });
     assert.equal(reported, 1);
     assert.match(fetchImpl.calls[0], /orientation=squarish/);
+  });
+
+  it('unsplash adds UTM params to credit and source links and keeps download_location', async () => {
+    const fetchImpl = fakeFetch({ results: [{
+      id: 'abc', width: 4000, height: 3000, alt_description: 'corn',
+      urls: { regular: 'https://images.unsplash.com/a', full: 'https://images.unsplash.com/b' },
+      user: { name: 'Jo', links: { html: 'https://unsplash.com/@jo' } },
+      links: { html: 'https://unsplash.com/photos/abc', download_location: 'https://api.unsplash.com/photos/abc/download?ixid=1' },
+    }] });
+    const [img] = await unsplash('corn', 1, '', { fetchImpl });
+    assert.equal(img.creditUrl, 'https://unsplash.com/@jo?utm_source=sise&utm_medium=referral');
+    assert.equal(img.sourceUrl, 'https://unsplash.com/photos/abc?utm_source=sise&utm_medium=referral');
+    assert.equal(img.downloadLocation, 'https://api.unsplash.com/photos/abc/download?ixid=1');
+  });
+
+  it('trackDownload calls only api.unsplash.com download endpoints, with the key', async () => {
+    process.env.UNSPLASH_KEY = 'k';
+    const fetchImpl = fakeFetch({});
+    assert.equal(await trackDownload('https://api.unsplash.com/photos/abc/download?ixid=1', { fetchImpl }), true);
+    assert.match(fetchImpl.calls[0], /^https:\/\/api\.unsplash\.com\/photos\/abc\/download/);
+    for (const bad of ['https://evil.example/photos/abc/download', 'http://api.unsplash.com/photos/abc/download', 'https://api.unsplash.com/me', '']) {
+      assert.equal(await trackDownload(bad, { fetchImpl }), false);
+    }
+    assert.equal(fetchImpl.calls.length, 1);
   });
 
   it('pixabay logs and returns [] on a non-OK response, still reporting it', async () => {

@@ -34,6 +34,11 @@ describe('buildDownloadParams', () => {
     assert.equal(p.get('license'), 'Pexels License');
     assert.equal(p.get('sourceUrl'), 'https://pexels.com/1');
   });
+  it('passes Unsplash download_location through so the server can report the download', () => {
+    const loc = 'https://api.unsplash.com/photos/abc/download?ixid=1';
+    assert.equal(buildDownloadParams({ ...img, downloadLocation: loc }, 'a').get('downloadLocation'), loc);
+    assert.equal(buildDownloadParams(img, 'a').has('downloadLocation'), false);
+  });
   it('defaults to web size and omits missing credit fields', () => {
     const p = buildDownloadParams({ full: 'https://x/1.jpg' }, 'a');
     assert.equal(p.get('size'), 'web');

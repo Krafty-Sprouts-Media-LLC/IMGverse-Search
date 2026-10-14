@@ -5,6 +5,15 @@ All notable changes to SISE (formerly IMGverse Search) will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 14/10/2026
+
+### Added
+- **Unsplash API guidelines (needed to apply for Production).** Unsplash links now carry `utm_source=sise&utm_medium=referral`; the Search card credit reads *Photo by <name> on Unsplash* with both parts linked; and when an Unsplash image is downloaded (either tab) the server reports it to Unsplash through the photo's `download_location`. Only `https://api.unsplash.com/photos/<id>/download` is ever requested, so the browser cannot point our API key at another host.
+
+### Fixed
+- **"Paused · resets in 47:19" was a guess.** When Unsplash reported 0 requests left it sends no reset time, so we blocked the provider for a full hour from our own window start. We now pause for 5 minutes, then let one request through: if Unsplash still says 0 left (or returns 429) it pauses again; if not, searching resumes. Pixabay without a reset time behaves the same; Pexels (monthly quota) is unchanged.
+- **Unsplash default limit** is now 50/hour (a Demo key) instead of 5000, so the budget shown before the first call is right. Unsplash's own header still wins, so a Production key shows 1000. README corrected (Production is 1,000/hour, not 5,000).
+
 ## [2.0.2] - 14/10/2026
 
 ### Added
