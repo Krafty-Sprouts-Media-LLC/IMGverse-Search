@@ -16,6 +16,7 @@ import {
   mapOpenverseItem,
   messageFromFailedOpenverse,
   mergeHasNext,
+  OPENVERSE_ASPECT_RATIO,
   searchOpenverse,
   shouldFetchOpenverse,
   weaveOpenverse,
@@ -151,5 +152,39 @@ describe('searchOpenverse', () => {
     assert.equal(result.images.length, 0);
     assert.equal(result.hasNext, false);
     assert.match(result.error, /Cloudflare/i);
+  });
+});
+
+describe('searchOpenverse orientation', () => {
+  const okBody = (results) => ({
+    status: 200,
+    text: async () => JSON.stringify({ result_count: results.length, page_count: 1, results }),
+  });
+
+  it('maps orientation to the native aspect_ratio filter', () => {
+    assert.deepEqual(OPENVERSE_ASPECT_RATIO, { landscape: 'wide', portrait: 'tall', square: 'square' });
+  });
+
+  it('sends aspect_ratio=tall for portrait', async () => {
+    let seen = '';
+    const fetchImpl = async (url) => { seen = String(url); return okBody([]); };
+    await searchOpenverse({ q: 'cat', orientation: 'portrait', fetchImpl });
+    assert.equal(new URL(seen).searchParams.get('aspect_ratio'), 'tall');
+  });
+
+  it('sends no aspect_ratio when orientation is Any', async () => {
+    let seen = '';
+    const fetchImpl = async (url) => { seen = String(url); return okBody([]); };
+    await searchOpenverse({ q: 'cat', orientation: '', fetchImpl });
+    assert.equal(new URL(seen).searchParams.has('aspect_ratio'), false);
+  });
+
+  it('still drops near-square images Openverse returns for tall', async () => {
+    const fetchImpl = async () => okBody([
+      { id: 'tall', url: 'https://example.com/a.jpg', width: 600, height: 900 },
+      { id: 'nearsquare', url: 'https://example.com/b.jpg', width: 950, height: 1000 },
+    ]);
+    const result = await searchOpenverse({ q: 'cat', orientation: 'portrait', fetchImpl });
+    assert.deepEqual(result.images.map((i) => i.id), ['openverse-tall']);
   });
 });

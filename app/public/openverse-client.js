@@ -19,6 +19,13 @@ export { filterByOrientation };
 export const OPENVERSE_ENDPOINT = 'https://api.openverse.org/v1/images/';
 export const OPENVERSE_ANON_PAGE_SIZE = 20;
 
+/** Openverse's native shape filter values for our orientation names. */
+export const OPENVERSE_ASPECT_RATIO = Object.freeze({
+  landscape: 'wide',
+  portrait:  'tall',
+  square:    'square',
+});
+
 /**
  * Cap page size to Openverse's anonymous maximum.
  *
@@ -171,6 +178,12 @@ export async function searchOpenverse({
   url.searchParams.set('q', q || '');
   url.searchParams.set('page', String(pageNum));
   url.searchParams.set('page_size', String(size));
+  // Native filter first (full pages of the right shape); the shared ratio
+  // check below stays as a safety net because Openverse's "wide"/"tall"
+  // boundaries are looser than ours.
+  if (OPENVERSE_ASPECT_RATIO[orientation]) {
+    url.searchParams.set('aspect_ratio', OPENVERSE_ASPECT_RATIO[orientation]);
+  }
 
   try {
     const res = await fetchImpl(url.toString(), {
