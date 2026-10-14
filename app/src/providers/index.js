@@ -53,9 +53,8 @@ export function createSearchAll({ providers, budget, cache, ttlSeconds = 3600 })
    * @returns {Promise<{ results: object[], providerStatus: object }>}
    */
   return async function searchAll(query, page = 1, filter = [], orientation = '') {
-    const active = filter.length
-      ? providers.filter((p) => filter.includes(p.name))
-      : providers;
+    const active = (filter.length ? providers.filter((p) => filter.includes(p.name)) : providers)
+      .filter((p) => (p.configured ? p.configured() : true));
     const providerStatus = {};
 
     const groups = await Promise.all(active.map(async (p) => {
@@ -76,10 +75,18 @@ export function createSearchAll({ providers, budget, cache, ttlSeconds = 3600 })
       }
 
       budget.recordCall(p.name);
+      // Adapters swallow their own failures and return []; these two hooks
+      // let us tell "no images" apart from "provider failed".
+      let lastStatus = 0;
+      let reportedError = false;
       let group;
       try {
         group = await p.search(query, page, p.nativeOrientation ? orientation : '', {
-          onResponse: (res) => budget.observe(p.name, res.status, res.headers),
+          onResponse: (res) => {
+            lastStatus = res.status;
+            budget.observe(p.name, res.status, res.headers);
+          },
+          onError: () => { reportedError = true; },
         });
       } catch (err) {
         console.error(`[IMGverse/providers] ${p.name} rejected for q="${query}":`, err?.message || err);
@@ -96,10 +103,14 @@ export function createSearchAll({ providers, budget, cache, ttlSeconds = 3600 })
       }
 
       const after = budget.canCall(p.name);
-      providerStatus[p.name] = after.ok
-        ? { status: 'ok' }
-        : { status: 'paused', resumeAt: new Date(after.resumeAt).toISOString() };
-      console.warn(`[IMGverse/providers] ${p.name} returned 0 results for q="${query}" page=${page}`);
+      if (!after.ok) {
+        providerStatus[p.name] = { status: 'paused', resumeAt: new Date(after.resumeAt).toISOString() };
+      } else if (reportedError || lastStatus >= 400) {
+        providerStatus[p.name] = { status: 'error' };
+      } else {
+        providerStatus[p.name] = { status: 'ok' };
+        console.warn(`[IMGverse/providers] ${p.name} returned 0 results for q="${query}" page=${page}`);
+      }
       return group;
     }));
 
@@ -110,14 +121,31 @@ export function createSearchAll({ providers, budget, cache, ttlSeconds = 3600 })
   };
 }
 
+/**
+ * Budget snapshot limited to providers that are configured (have their key).
+ *
+ * @param {object} budget
+ * @param {Array<{ name: string, configured?: Function }>} providers
+ * @returns {object}
+ */
+export function snapshotConfigured(budget, providers) {
+  const snap = budget.snapshot();
+  const out = {};
+  for (const p of providers) {
+    if (snap[p.name] && (p.configured ? p.configured() : true)) out[p.name] = snap[p.name];
+  }
+  return out;
+}
+
 /** Process-wide rate budget, shared by every search and /api/providers/status. */
 export const budget = createRateBudget({ limits: limitsFromEnv() });
 
-const PROVIDERS = [
+// `configured` keeps keyless providers out of searches, budgets and the UI.
+export const PROVIDERS = [
   { name: 'inaturalist', search: inaturalist, nativeOrientation: false },
-  { name: 'unsplash',    search: unsplash,    nativeOrientation: true  },
-  { name: 'pexels',      search: pexels,      nativeOrientation: true  },
-  { name: 'pixabay',     search: pixabay,     nativeOrientation: true  },
+  { name: 'unsplash',    search: unsplash,    nativeOrientation: true, configured: () => Boolean(process.env.UNSPLASH_KEY) },
+  { name: 'pexels',      search: pexels,      nativeOrientation: true, configured: () => Boolean(process.env.PEXELS_KEY) },
+  { name: 'pixabay',     search: pixabay,     nativeOrientation: true, configured: () => Boolean(process.env.PIXABAY_KEY) },
 ];
 
 export const searchAll = createSearchAll({

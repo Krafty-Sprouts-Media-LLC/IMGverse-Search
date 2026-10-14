@@ -23,10 +23,10 @@ const BASE = 'https://api.unsplash.com/search/photos';
  * @param {string} query       - Search term.
  * @param {number} page        - Page number (1-indexed).
  * @param {string} orientation - '' | 'landscape' | 'portrait' | 'square'
- * @param {object}   [options]            - { onResponse(res), fetchImpl } — used by the rate budget and tests.
+ * @param {object} [options]   - { onResponse(res), onError(err), fetchImpl } — used by the rate budget and tests.
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
-export async function search(query, page = 1, orientation = '', { onResponse, fetchImpl = fetch } = {}) {
+export async function search(query, page = 1, orientation = '', { onResponse, onError, fetchImpl = fetch } = {}) {
   if (!process.env.UNSPLASH_KEY) return [];
 
   try {
@@ -66,6 +66,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, fe
     );
   } catch (err) {
     console.error(`[IMGverse/unsplash] search failed for q="${query}":`, err.message);
+    onError?.(err);
     return [];
   }
 }

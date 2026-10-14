@@ -91,8 +91,9 @@ pass "/api/search includes providerStatus"
 
 info "Testing /api/providers/status..."
 STATUS_RESPONSE=$(curl -s "${BASE_URL}/api/providers/status")
-echo "${STATUS_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); assert all(k in d for k in ('pexels','unsplash','pixabay','inaturalist'))" \
-    || fail "/api/providers/status is missing providers"
+# Only providers with API keys are listed; iNaturalist needs no key, so it is always there.
+echo "${STATUS_RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'inaturalist' in d and 'remaining' in d['inaturalist']" \
+    || fail "/api/providers/status is missing provider budgets"
 pass "/api/providers/status lists provider budgets"
 
 info "Testing /proxy with an Openverse image URL..."

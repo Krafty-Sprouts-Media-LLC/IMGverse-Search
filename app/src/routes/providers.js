@@ -10,12 +10,13 @@
 'use strict';
 
 import { Router } from 'express';
-import { budget } from '../providers/index.js';
+import { PROVIDERS, budget, snapshotConfigured } from '../providers/index.js';
 
 const router = Router();
 
+// Only providers with an API key are listed; keyless ones are never called.
 router.get('/status', (_req, res) => {
-  res.json(budget.snapshot());
+  res.json(snapshotConfigured(budget, PROVIDERS));
 });
 
 export default router;

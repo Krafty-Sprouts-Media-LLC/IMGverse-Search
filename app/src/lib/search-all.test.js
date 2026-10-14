@@ -10,8 +10,9 @@
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createSearchAll } from '../providers/index.js';
+import { createSearchAll, snapshotConfigured } from '../providers/index.js';
 import { createRateBudget } from './rate-budget.js';
+import { search as pexelsAdapter } from '../providers/pexels.js';
 
 const HOUR = 3_600_000;
 
@@ -154,6 +155,62 @@ describe('createSearchAll', () => {
     assert.deepEqual(results.map((r) => r.id).sort(), ['inaturalist-box', 'pixabay-box']);
   });
 
+  it('reports error when the provider answers with an HTTP error status', async () => {
+    const a = fakeProvider('pexels', [], {
+      onCall: (options) => {
+        options.onResponse({ status: 500, headers: new Headers() });
+        return [];
+      },
+    });
+    const searchAll = createSearchAll({ providers: [a], budget: budgetFor(['pexels']), cache: memCache() });
+    const { providerStatus } = await searchAll('salmon');
+    assert.deepEqual(providerStatus.pexels, { status: 'error' });
+  });
+
+  it('reports error when the adapter reports a failure without throwing', async () => {
+    const a = fakeProvider('pexels', [], {
+      onCall: (options) => {
+        options.onError?.(new Error('timeout'));
+        return [];
+      },
+    });
+    const searchAll = createSearchAll({ providers: [a], budget: budgetFor(['pexels']), cache: memCache() });
+    const { providerStatus } = await searchAll('salmon');
+    assert.deepEqual(providerStatus.pexels, { status: 'error' });
+  });
+
+  it('reports a real adapter HTTP 500 as error end to end', async () => {
+    const saved = process.env.PEXELS_KEY;
+    process.env.PEXELS_KEY = 'test-key';
+    try {
+      const fetchImpl = async () => ({ ok: false, status: 500, headers: new Headers(), json: async () => ({}) });
+      const real = {
+        name: 'pexels',
+        nativeOrientation: true,
+        search: (q, page, orientation, options) => pexelsAdapter(q, page, orientation, { ...options, fetchImpl }),
+      };
+      const searchAll = createSearchAll({ providers: [real], budget: budgetFor(['pexels']), cache: memCache() });
+      const { providerStatus } = await searchAll('salmon');
+      assert.deepEqual(providerStatus.pexels, { status: 'error' });
+    } finally {
+      if (saved === undefined) delete process.env.PEXELS_KEY;
+      else process.env.PEXELS_KEY = saved;
+    }
+  });
+
+  it('skips unconfigured providers without spending budget or reporting them', async () => {
+    const a = fakeProvider('pexels', [img('pexels', 1)]);
+    a.configured = () => false;
+    const b = fakeProvider('pixabay', [img('pixabay', 1)]);
+    const budget = budgetFor(['pexels', 'pixabay']);
+    const searchAll = createSearchAll({ providers: [a, b], budget, cache: memCache() });
+    const { results, providerStatus } = await searchAll('salmon');
+    assert.equal(a.calls.length, 0);
+    assert.deepEqual(Object.keys(providerStatus), ['pixabay']);
+    assert.deepEqual(results.map((r) => r.id), ['pixabay-1']);
+    assert.equal(budget.snapshot().pexels.remaining, 5);
+  });
+
   it('honours the provider filter', async () => {
     const a = fakeProvider('pexels', [img('pexels', 1)]);
     const b = fakeProvider('pixabay', [img('pixabay', 1)]);
@@ -161,5 +218,16 @@ describe('createSearchAll', () => {
     const { providerStatus } = await searchAll('salmon', 1, ['pixabay']);
     assert.equal(a.calls.length, 0);
     assert.deepEqual(Object.keys(providerStatus), ['pixabay']);
+  });
+});
+
+describe('snapshotConfigured', () => {
+  it('lists only configured providers', () => {
+    const budget = budgetFor(['pexels', 'pixabay']);
+    const providers = [
+      { name: 'pexels', configured: () => false },
+      { name: 'pixabay' },
+    ];
+    assert.deepEqual(Object.keys(snapshotConfigured(budget, providers)), ['pixabay']);
   });
 });
