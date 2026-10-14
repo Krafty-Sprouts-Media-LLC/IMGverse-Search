@@ -13,8 +13,8 @@ import { imageKey, searchAllSources } from './search-client.js?v=2.0.0';
 import {
     formatBatchFailureLine,
     formatBatchFinishMessage,
-    messageFromDownloadResponse,
 } from './batch-helpers.js?v=1.0.34';
+import { downloadImage, runDownloadQueue } from './download-queue.js?v=2.0.0';
 import {
     storageGet,
     storageGetJSON,
@@ -283,24 +283,10 @@ function clearBatchSelection() {
     updateBatchPanel();
 }
 
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** @param {object} img @param {string} name */
+/** @returns {'web'|'full'} */
 function getBatchDownloadSize() {
     const selected = document.querySelector('input[name="batch-size"]:checked');
     return selected?.value === 'full' ? 'full' : 'web';
-}
-
-/** @param {object} img @param {string} name */
-function buildDownloadParams(img, name) {
-    const params = new URLSearchParams({ url: img.full, name, size: getBatchDownloadSize() });
-    if (img.credit)    params.set('credit', img.credit);
-    if (img.provider)  params.set('provider', img.provider);
-    if (img.license)   params.set('license', img.license);
-    if (img.sourceUrl) params.set('sourceUrl', img.sourceUrl);
-    return params;
 }
 
 function clearBatchFailures() {
@@ -331,25 +317,6 @@ function renderBatchFailures() {
     });
 }
 
-async function downloadBatchItem(img, name) {
-    const params = buildDownloadParams(img, name);
-    const res = await fetch(`/download?${params}`);
-    if (!res.ok) {
-        const body = await res.text();
-        throw new Error(messageFromDownloadResponse(res.status, body));
-    }
-
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = blobUrl;
-    anchor.download = `${name}.jpg`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(blobUrl);
-}
-
 function queueFromSelections() {
     const filenames = parseFilenames(batchFilenames.value);
     if (filenames.length !== batchSelections.length || filenames.length === 0) return [];
@@ -363,23 +330,14 @@ async function runBatchQueue(queue) {
     batchDownloadBtn.textContent = 'Downloading…';
     updateBatchPanel();
 
-    const nextFailures = [];
     const total = queue.length;
-
-    for (let i = 0; i < total; i++) {
-        const { img, name } = queue[i];
-        batchStatus.textContent = `Downloading ${i + 1} of ${total}: ${name}`;
-
-        try {
-            await downloadBatchItem(img, name);
-        } catch (err) {
-            const error = err.message || 'Download failed';
-            nextFailures.push({ img, name, error });
-            console.error('[IMGverse/batch]', name, error);
-        }
-
-        if (i < total - 1) await sleep(700);
-    }
+    const size = getBatchDownloadSize();
+    const nextFailures = await runDownloadQueue(queue, {
+        download:   (img, name) => downloadImage(img, name, size),
+        onProgress: ({ index, name }) => {
+            batchStatus.textContent = `Downloading ${index + 1} of ${total}: ${name}`;
+        },
+    });
 
     batchDownloading = false;
     batchDownloadBtn.textContent = 'Download queue';
