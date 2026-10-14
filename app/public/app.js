@@ -78,8 +78,7 @@ function loadOpenedKeys() {
     if (!raw) {
         raw = storageGet(LEGACY_SAVED_STORAGE_KEY);
         if (raw) {
-            storageSet(OPENED_STORAGE_KEY, raw);
-            storageRemove(LEGACY_SAVED_STORAGE_KEY);
+            if (storageSet(OPENED_STORAGE_KEY, raw)) storageRemove(LEGACY_SAVED_STORAGE_KEY);
         }
     }
     let keys = [];

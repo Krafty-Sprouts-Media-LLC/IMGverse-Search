@@ -18,7 +18,7 @@ function warnOnce(action, key, err) {
   if (warned) return;
   warned = true;
   console.warn(
-    `[IMGverse/storage] ${action} "${key}" failed; batch state will not survive a reload:`,
+    `[IMGverse/storage] ${action} "${key}" failed; batch selections and Opened marks will not survive a reload:`,
     err?.message || err
   );
 }
@@ -27,7 +27,8 @@ function resolve(storage) {
   if (storage) return storage;
   try {
     return globalThis.sessionStorage || null;
-  } catch {
+  } catch (err) {
+    warnOnce('access', 'sessionStorage', err);
     return null;
   }
 }

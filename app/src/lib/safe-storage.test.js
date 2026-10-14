@@ -51,12 +51,27 @@ describe('safe-storage with working storage', () => {
   });
 });
 
+/** Run fn with console.warn stubbed; returns the captured call args. */
+async function captureWarn(fn) {
+  const original = console.warn;
+  const calls = [];
+  console.warn = (...args) => { calls.push(args); };
+  try {
+    await fn();
+  } finally {
+    console.warn = original;
+  }
+  return calls;
+}
+
 describe('safe-storage with blocked storage', () => {
-  it('never throws when every call throws', () => {
-    assert.equal(storageGet('a', throwing), null);
-    assert.equal(storageSet('a', '1', throwing), false);
-    assert.equal(storageRemove('a', throwing), false);
-    assert.deepEqual(storageGetJSON('a', [], throwing), []);
+  it('never throws when every call throws', async () => {
+    await captureWarn(() => {
+      assert.equal(storageGet('a', throwing), null);
+      assert.equal(storageSet('a', '1', throwing), false);
+      assert.equal(storageRemove('a', throwing), false);
+      assert.deepEqual(storageGetJSON('a', [], throwing), []);
+    });
   });
 
   it('never throws when sessionStorage itself is unavailable', () => {
@@ -64,5 +79,32 @@ describe('safe-storage with blocked storage', () => {
     assert.equal(storageGet('a'), null);
     assert.equal(storageSet('a', '1'), false);
     assert.equal(storageRemove('a'), false);
+  });
+
+  it('logs one prefixed warning when reading sessionStorage throws', async () => {
+    Object.defineProperty(globalThis, 'sessionStorage', {
+      configurable: true,
+      get() { throw new Error('SecurityError'); },
+    });
+    try {
+      const mod = await import('../../public/safe-storage.js?fresh=blocked');
+      const calls = await captureWarn(() => {
+        assert.equal(mod.storageSet('a', '1'), false);
+        assert.equal(mod.storageGet('a'), null);
+      });
+      assert.equal(calls.length, 1);
+      assert.ok(String(calls[0][0]).startsWith('[IMGverse/storage]'));
+    } finally {
+      delete globalThis.sessionStorage;
+    }
+  });
+
+  it('logs nothing when sessionStorage is plainly absent', async () => {
+    const mod = await import('../../public/safe-storage.js?fresh=absent');
+    const calls = await captureWarn(() => {
+      assert.equal(mod.storageSet('a', '1'), false);
+      assert.equal(mod.storageGet('a'), null);
+    });
+    assert.equal(calls.length, 0);
   });
 });
