@@ -5,6 +5,11 @@ All notable changes to SISE (formerly IMGverse Search) will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.4] - 14/10/2026
+
+### Fixed
+- **Unsplash credit was cut off on Search cards.** "Photo by <name> on Unsplash" was forced onto one line with an ellipsis, so long names hid "on Unsplash". The credit now wraps and always shows in full.
+
 ## [2.0.3] - 14/10/2026
 
 ### Added
