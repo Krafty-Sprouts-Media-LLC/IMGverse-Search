@@ -14,7 +14,7 @@ import {
     searchOpenverse,
     shouldFetchOpenverse,
     weaveOpenverse,
-} from './openverse-client.js?v=1.0.33';
+} from './openverse-client.js?v=1.0.36';
 import {
     formatBatchFailureLine,
     formatBatchFinishMessage,

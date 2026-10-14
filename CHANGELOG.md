@@ -5,6 +5,17 @@ All notable changes to IMGverse Search will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.36] - 14/10/2026
+
+### Fixed
+- **Orientation filter now works for iNaturalist.** Photo sizes were hard-coded to 0×0, so portrait and landscape filters let every iNaturalist image through; sizes now come from the API's `original_dimensions`
+- **Openverse orientation returns full pages.** Openverse's own `aspect_ratio` filter (wide / tall / square) is now used instead of fetching everything and throwing most results away; our ratio check stays as a safety net
+- Batch selections and "Opened" marks no longer break the page when the browser blocks session storage (private mode, blocked site data, full quota); a single `[IMGverse/storage]` warning is logged instead
+- iNaturalist failures are now logged instead of silently returning no results
+
+### Changed
+- Landscape / portrait / square rules live in one shared module (`app/public/image-shape.js`) used by both the server and the browser
+
 ## [1.0.35] - 19/09/2026
 
 ### Changed
