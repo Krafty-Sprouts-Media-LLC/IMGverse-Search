@@ -1,0 +1,187 @@
+// =============================================================================
+// src/lib/bulk-queue.test.js
+// IMGverse Search — Tests for the bulk keyword queue.
+//
+// @package IMGverse-Search
+// @since   2.0.0
+// =============================================================================
+
+'use strict';
+
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { CONCURRENCY, LOOKAHEAD, OPENVERSE_BACKOFF_MS, createBulkQueue } from '../../public/bulk-queue.js';
+
+const img = (id, w = 1600, h = 900) => ({ id, full: `https://cdn.example/${id}.jpg`, width: w, height: h });
+const tick = () => new Promise((r) => setImmediate(r));
+async function settle() { for (let i = 0; i < 20; i++) await tick(); }
+
+function harness({ results = (q) => [img(`${q}-1`), img(`${q}-2`)], status = () => ({}) } = {}) {
+  const calls = [];
+  const timers = [];
+  let t = 0;
+  const q = createBulkQueue({
+    now: () => t,
+    schedule: (fn, ms) => { const timer = { fn, at: t + ms, live: true }; timers.push(timer); return () => { timer.live = false; }; },
+    search: async ({ query, orientation, providers }) => {
+      calls.push({ query, orientation, providers });
+      return { results: results(query, providers), providerStatus: status(query, providers) };
+    },
+  });
+  const advance = async (ms) => {
+    t += ms;
+    for (const timer of timers) if (timer.live && timer.at <= t) { timer.live = false; timer.fn(); }
+    await settle();
+  };
+  return { q, calls, advance };
+}
+
+const words = (n) => Array.from({ length: n }, (_, i) => `what to serve with dish${i}`);
+
+describe('bulk queue', () => {
+  it('cleans queries and only searches rows inside the look-ahead window', async () => {
+    const { q, calls } = harness();
+    q.load(words(40), { orientation: 'landscape' });
+    await settle();
+    assert.equal(q.rows[0].query, 'dish0');
+    assert.equal(calls.length, LOOKAHEAD + 1);
+    assert.equal(q.rows[LOOKAHEAD + 1].state, 'queued');
+    assert.equal(q.inWindow(LOOKAHEAD + 1), false);
+    q.setReadPos(15);
+    await settle();
+    assert.equal(calls.length, 26);
+  });
+
+  it('never runs more than two searches at once', async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const q = createBulkQueue({
+      search: async () => { inFlight++; peak = Math.max(peak, inFlight); await tick(); inFlight--; return { results: [img('a')], providerStatus: {} }; },
+    });
+    q.load(words(8), { orientation: '' });
+    await settle();
+    assert.equal(peak, CONCURRENCY);
+  });
+
+  it('auto-picks and marks empty rows for review', async () => {
+    const { q } = harness({ results: (query) => (query === 'dish1' ? [] : [img('s', 800, 500), img('w')]) });
+    q.load(words(2), { orientation: 'landscape' });
+    await settle();
+    assert.equal(q.rows[0].pick, 1);
+    assert.equal(q.rows[1].state, 'empty');
+    assert.deepEqual(q.counts(), { all: 2, done: 2, picked: 1, review: 1, skipped: 0, waiting: 0 });
+  });
+
+  it('re-searches one edited row and replaces its pick', async () => {
+    const { q, calls } = harness();
+    q.load(words(3), { orientation: '' });
+    await settle();
+    q.pick(1, 1);
+    q.setQuery(1, 'braised lamb');
+    await settle();
+    assert.equal(calls.at(-1).query, 'braised lamb');
+    assert.equal(calls.length, 4);
+    assert.equal(q.rows[1].pick, 0);
+    assert.equal(q.rows[1].edited, true);
+    assert.equal(q.rows[0].images[0].id, 'dish0-1');
+  });
+
+  it('keeps server images and waits on Openverse after a 429, then tops up by itself', async () => {
+    const { q, calls, advance } = harness({
+      results: (query, providers) => (providers?.[0] === 'openverse' ? [img(`${query}-ov`)] : [img(`${query}-1`)]),
+      status: (query, providers) => (providers ? { openverse: { status: 'ok' } } : { pexels: { status: 'ok' }, openverse: { status: 'paused' } }),
+    });
+    q.load(words(2), { orientation: '' });
+    await settle();
+    assert.deepEqual(q.rows[0].pending, ['openverse']);
+    assert.equal(q.rows[0].state, 'done');
+    assert.equal(q.counts().waiting, 2);
+    assert.equal(q.counts().review, 0);
+    q.pick(0, 0);
+    await advance(OPENVERSE_BACKOFF_MS);
+    assert.ok(calls.some((c) => c.providers?.[0] === 'openverse'));
+    assert.deepEqual(q.rows[0].pending, []);
+    assert.deepEqual(q.rows[0].images.map((i) => i.id), ['dish0-1', 'dish0-ov']);
+    assert.equal(q.rows[0].pick, 0);
+  });
+
+  it('tops up rows waiting on a paused server provider when asked', async () => {
+    let paused = true;
+    const { q } = harness({
+      results: (query, providers) => (providers?.[0] === 'pexels' ? [img(`${query}-px`)] : (paused ? [] : [img(`${query}-1`)])),
+      status: (query, providers) => (providers ? { pexels: { status: 'ok' } } : { pexels: { status: paused ? 'paused' : 'ok' } }),
+    });
+    q.load(words(1), { orientation: '' });
+    await settle();
+    assert.equal(q.rows[0].state, 'empty');
+    assert.deepEqual(q.rows[0].pending, ['pexels']);
+    assert.equal(q.counts().review, 0);
+    paused = false;
+    q.topUp('pexels');
+    await settle();
+    assert.equal(q.rows[0].state, 'done');
+    assert.equal(q.rows[0].pick, 0);
+    assert.deepEqual(q.rows[0].pending, []);
+  });
+
+  it('pauses and resumes', async () => {
+    const { q, calls } = harness();
+    q.load(words(5), { orientation: '' });
+    q.pause();
+    await settle();
+    const before = calls.length;
+    q.setReadPos(3);
+    await settle();
+    assert.equal(calls.length, before);
+    q.resume();
+    await settle();
+    assert.equal(calls.length, 5);
+  });
+
+  it('re-queues everything when the orientation changes', async () => {
+    const { q, calls } = harness();
+    q.load(words(3), { orientation: '' });
+    await settle();
+    q.toggleSkip(2);
+    q.setOrientation('portrait');
+    await settle();
+    assert.equal(calls.length, 5);
+    assert.equal(calls.at(-1).orientation, 'portrait');
+  });
+
+  it('snapshots and restores edits, picks by image key, skips and position', async () => {
+    const { q } = harness();
+    q.load(words(3), { orientation: 'square' });
+    await settle();
+    q.setQuery(0, 'lamb shank');
+    await settle();
+    q.pick(0, 1);
+    q.toggleSkip(2);
+    q.setReadPos(1);
+    const saved = JSON.parse(JSON.stringify(q.snapshot()));
+
+    const again = harness();
+    again.q.load(saved.keywords, { orientation: saved.orientation, saved });
+    await settle();
+    assert.equal(again.q.rows[0].query, 'lamb shank');
+    assert.equal(again.q.rows[0].pick, 1);
+    assert.equal(again.q.rows[2].skipped, true);
+    assert.equal(again.q.readPos, 1);
+    assert.equal(again.calls[0].orientation, 'square');
+  });
+
+  it('lists picked, non-skipped rows for download under the keyword name', async () => {
+    const { q } = harness({ results: (query) => (query === 'dish1' ? [] : [img(`${query}-1`)]) });
+    q.load(words(3), { orientation: '' });
+    await settle();
+    q.toggleSkip(2);
+    assert.deepEqual(q.downloadList().map((d) => [d.name, d.img.id]), [['what to serve with dish0', 'dish0-1']]);
+  });
+
+  it('dedupes and caps the keyword list', () => {
+    const { q } = harness();
+    q.load([' a ', 'a', '', ...words(1200)], { orientation: '' });
+    assert.equal(q.rows.length, 1000);
+    assert.equal(q.rows[0].keyword, 'a');
+  });
+});
