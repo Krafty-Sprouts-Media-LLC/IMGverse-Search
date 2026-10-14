@@ -299,6 +299,44 @@ describe('bulk queue', () => {
     assert.deepEqual(q.downloadList().map((d) => d.name), ['what to serve with dish0']);
   });
 
+  it('ignores clearPick on skipped rows and on rows still searching', async () => {
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const q = createBulkQueue({
+      search: async ({ query }) => {
+        if (query === 'dish1') await gate;
+        return { results: [img(`${query}-1`)], providerStatus: {} };
+      },
+    });
+    q.load(words(2), { orientation: '' });
+    await settle();
+    q.toggleSkip(0);
+    q.clearPick(0);
+    q.toggleSkip(0);
+    assert.equal(q.rows[0].pick, 0);
+    q.clearPick(1);
+    release();
+    await settle();
+    assert.equal(q.rows[1].pick, 0);
+  });
+
+  it('counts only finished rows as not selected', async () => {
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const q = createBulkQueue({
+      search: async ({ query }) => {
+        if (query === 'dish1') await gate;
+        return { results: query === 'dish0' ? [] : [img(`${query}-1`)], providerStatus: {} };
+      },
+    });
+    q.load(words(2), { orientation: '' });
+    await settle();
+    assert.equal(q.counts().notSelected, 1);
+    release();
+    await settle();
+    assert.equal(q.counts().notSelected, 1);
+  });
+
   it('keeps an unselected row empty when a late top-up adds images', async () => {
     const { q, advance } = harness({
       results: (query, providers) => (providers ? [img(`${query}-ov`)] : [img(`${query}-1`)]),

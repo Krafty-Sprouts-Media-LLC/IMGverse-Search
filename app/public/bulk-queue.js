@@ -320,10 +320,10 @@ export function createBulkQueue({
       onChange();
     },
 
-    /** Leave this keyword without an image (it won't be downloaded). */
+    /** Leave this keyword without an image (it won't be downloaded). Only for searched, visible rows. */
     clearPick(i) {
       const row = rows[i];
-      if (!row) return;
+      if (!row || row.skipped || !row.images.length) return;
       row.pick = null;
       row.cleared = true;
       onChange();
@@ -371,15 +371,17 @@ export function createBulkQueue({
       let skipped = 0;
       let waiting = 0;
       let downloaded = 0;
+      let notSelected = 0;
       for (const r of rows) {
-        if (r.state !== 'queued' && r.state !== 'loading') done++;
+        const finished = r.state !== 'queued' && r.state !== 'loading';
+        if (finished) done++;
         if (r.skipped) { skipped++; continue; }
         if (r.pick != null) picked++;
+        else if (finished) notSelected++;   // rows still searching aren't "missing" yet
         if (isDownloaded(r)) downloaded++;
         if (r.pending.length) waiting++;
         if (r.state === 'error' || (r.state === 'empty' && !r.pending.length)) review++;
       }
-      const notSelected = rows.length - skipped - picked;
       return { all: rows.length, done, picked, review, skipped, waiting, notSelected, downloaded, toDownload: picked - downloaded };
     },
 

@@ -144,7 +144,7 @@ function needsReview(row) {
 function visible(row) {
     if (filter === 'review') return needsReview(row);
     if (filter === 'picked') return !row.skipped && row.pick != null;
-    if (filter === 'notselected') return !row.skipped && row.pick == null;
+    if (filter === 'notselected') return !row.skipped && row.pick == null && row.state !== 'queued' && row.state !== 'loading';
     if (filter === 'skipped') return row.skipped;
     return true;
 }
@@ -321,6 +321,8 @@ function renderMeta() {
     els.redownload.classList.toggle('hidden', !c.downloaded);
     els.redownload.disabled = downloading;
     els.redownload.textContent = `Re-download all ${c.picked}`;
+    // A new run mid-download would mark the wrong rows as downloaded.
+    els.run.disabled = downloading || !parseKeywords().length;
     els.summary.textContent = c.all
         ? `${c.picked} of ${c.all - c.skipped} selected${c.downloaded ? ` · ${c.downloaded} downloaded` : ''}`
         : '';
@@ -550,7 +552,7 @@ function pick(i, j) {
 
 function start() {
     const list = parseKeywords();
-    if (!list.length) return;
+    if (!list.length || downloading) return;
     shown.clear();
     rowSig.clear();
     els.rows.replaceChildren();
@@ -582,7 +584,7 @@ function updateKeywordCount() {
 
 /** Which keyword row and image the preview shows. */
 const pv = { row: null, img: null };
-/** First click of a possible double-click on a thumbnail: { i, j, t, before }. */
+/** Last single click on a thumbnail: { i, j, before } (selection before that click). */
 let lastPickClick = null;
 
 function openPreview(i, j) {
@@ -598,12 +600,13 @@ function openPreview(i, j) {
 function renderPreview() {
     const row = queue.rows[pv.row];
     const img = row?.images[pv.img];
-    if (!img) { if (els.preview.open) els.preview.close(); return; }
+    if (!img) { closePreview(); return; }
 
     // Openverse thumbnails are small; use its full file and fall back to the thumbnail.
     const big = img.provider === 'openverse' && img.full ? img.full : img.thumb;
     if (els.pvImg.dataset.src !== big) {
         els.pvImg.dataset.src = big;
+        els.pvImg.removeAttribute('src');   // don't show the previous image under the new title
         els.pvImg.onerror = () => { if (els.pvImg.src !== img.thumb) els.pvImg.src = img.thumb; };
         els.pvImg.src = big;
     }
@@ -624,8 +627,11 @@ function renderPreview() {
     const selected = row.pick === pv.img;
     els.pvSelect.setAttribute('aria-pressed', String(selected));
     els.pvSelect.textContent = selected ? 'Selected — click to unselect' : 'Select this image';
-    els.pvSource.href = img.sourceUrl || img.full || '#';
-    els.pvSource.classList.toggle('hidden', !(img.sourceUrl || img.full));
+    // Third-party URL: only ever link to http(s).
+    const source = [img.sourceUrl, img.full].find((u) => /^https?:\/\//i.test(String(u || '')));
+    if (source) els.pvSource.href = source;
+    else els.pvSource.removeAttribute('href');
+    els.pvSource.classList.toggle('hidden', !source);
     els.pvPrev.disabled = pv.img <= 0;
     els.pvNext.disabled = pv.img >= row.images.length - 1;
 }
@@ -767,10 +773,11 @@ export function initBulkMode() {
         const act = btn.dataset.act;
         if (act === 'pick') {
             const j = Number(btn.dataset.img);
-            const now = Date.now();
-            // Remember the selection before the first click of a possible double-click.
-            const repeat = lastPickClick && lastPickClick.i === i && lastPickClick.j === j && now - lastPickClick.t < 600;
-            if (!repeat) lastPickClick = { i, j, t: now, before: queue.rows[i]?.pick ?? null };
+            // e.detail counts clicks with the system's own double-click speed:
+            // 1 (or 0 from the keyboard) toggles; the 2nd click of a double-click
+            // is ignored so the dblclick handler can open the preview instead.
+            if (e.detail >= 2) return;
+            lastPickClick = { i, j, before: queue.rows[i]?.pick ?? null };
             pick(i, j);
         }
         if (act === 'preview') openPreview(i, queue.rows[i]?.pick ?? 0);
@@ -779,8 +786,8 @@ export function initBulkMode() {
         if (act === 'retry') queue.retry(i);
     });
 
-    // Double-click a thumbnail to see it large. Its two clicks changed the
-    // selection, so put back what was selected before them.
+    // Double-click a thumbnail to see it large. Its first click toggled the
+    // selection, so put back what was selected before it.
     els.rows.addEventListener('dblclick', (e) => {
         const thumb = e.target.closest('.thumb[data-act="pick"]');
         if (!thumb) return;
@@ -810,6 +817,8 @@ export function initBulkMode() {
     });
     // Click on the dimmed backdrop closes the preview.
     els.preview.addEventListener('click', (e) => { if (e.target === els.preview) closePreview(); });
+    // The browser's own Esc handling: route it through closePreview() too.
+    els.preview.addEventListener('cancel', (e) => { e.preventDefault(); closePreview(); });
 
     els.rows.addEventListener('submit', (e) => {
         const form = e.target.closest('form.query');
@@ -835,6 +844,8 @@ export function initBulkMode() {
         const pos = vis.indexOf(active);   // -1 when the active row is filtered out
         const row = rows[active];
         const key = e.key.toLowerCase();
+        // Held keys repeat; toggles (digits, X, Space) must fire once per press.
+        if (e.repeat && (/^[1-9x ]$/.test(key))) return;
         if (key === 'j' || key === 'arrowdown') { e.preventDefault(); setActive(vis[pos === -1 ? 0 : Math.min(vis.length - 1, pos + 1)]); }
         else if (key === 'k' || key === 'arrowup') { e.preventDefault(); setActive(vis[pos === -1 ? 0 : Math.max(0, pos - 1)]); }
         else if (/^[1-9]$/.test(key) && row) { pick(active, Number(key) - 1); }
@@ -845,7 +856,15 @@ export function initBulkMode() {
             const next = row.pick == null ? 0 : Math.min(row.images.length - 1, Math.max(0, row.pick + step));
             if (next !== row.pick) pick(active, next);
         }
-        else if (key === ' ' && row?.images.length && !row.skipped) { e.preventDefault(); openPreview(active, row.pick ?? 0); }
+        else if (key === ' ' && row?.images.length && !row.skipped) {
+            // Space previews, but must keep activating ordinary buttons and links.
+            const t = e.target instanceof Element ? e.target : null;
+            const thumb = t?.closest('.thumb[data-act="pick"]');
+            if (!thumb && t?.closest('button, a, [role="button"], [role="tab"], summary')) return;
+            e.preventDefault();
+            if (thumb) openPreview(Number(thumb.dataset.row), Number(thumb.dataset.img));
+            else openPreview(active, row.pick ?? 0);
+        }
         else if (key === 's' && row) { queue.toggleSkip(active); }
         else if (key === 'x' && row) { queue.clearPick(active); }
         else if (key === 'e' && row) {

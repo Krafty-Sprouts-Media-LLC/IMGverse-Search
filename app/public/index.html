@@ -173,7 +173,7 @@
                     <button type="button" data-filter="notselected" aria-pressed="false">Not selected<span class="seg__n" id="bulk-n-notselected">0</span></button>
                     <button type="button" data-filter="skipped" aria-pressed="false">Skipped<span class="seg__n" id="bulk-n-skipped">0</span></button>
                 </div>
-                <div class="keys" aria-hidden="true"><span><kbd>J</kbd> <kbd>K</kbd> row</span><span><kbd>1</kbd>–<kbd>9</kbd> select / unselect</span><span><kbd>X</kbd> unselect</span><span><kbd>S</kbd> skip</span><span><kbd>E</kbd> edit</span></div>
+                <div class="keys" aria-hidden="true"><span><kbd>J</kbd> <kbd>K</kbd> row</span><span><kbd>1</kbd>–<kbd>9</kbd> select / unselect</span><span><kbd>←</kbd> <kbd>→</kbd> move</span><span><kbd>Space</kbd> preview</span><span><kbd>X</kbd> unselect</span><span><kbd>S</kbd> skip</span><span><kbd>E</kbd> edit</span></div>
                 <div class="bulk-actions">
                     <span class="bulk-summary" id="bulk-summary" aria-live="polite"></span>
                     <button type="button" id="bulk-redownload" class="btn btn-secondary hidden">Re-download all</button>
@@ -210,7 +210,7 @@
     </div>
 
     <!-- Bulk keywords: large image preview -->
-    <dialog id="bulk-preview" class="preview" aria-labelledby="preview-title">
+    <dialog id="bulk-preview" class="preview" tabindex="-1" aria-labelledby="preview-keyword preview-title">
         <div class="preview__head">
             <p class="preview__keyword" id="preview-keyword"></p>
             <button type="button" class="btn btn-ghost btn-sm" id="preview-close">Close</button>
