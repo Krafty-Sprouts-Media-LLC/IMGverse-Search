@@ -5,7 +5,7 @@
  * (openverse-client.js) so both sides agree on what "landscape",
  * "portrait" and "square" mean. Browser-safe: no Node imports.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   1.0.36
  */
 

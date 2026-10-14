@@ -1,10 +1,10 @@
 // =============================================================================
 // src/providers/inaturalist.js
-// IMGverse Search — iNaturalist provider adapter.
+// SISE — iNaturalist provider adapter.
 // Free, no API key required. Excellent for nature and wildlife photography.
 // Docs: https://api.inaturalist.org/v1/
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -36,20 +36,20 @@ export async function search(query, page = 1, _orientation = '', { onResponse, o
     });
 
     const res = await fetchImpl(`${BASE}?${params}`, {
-      headers: { 'User-Agent': 'IMGverse-Search/1.0' },
+      headers: { 'User-Agent': 'SISE/2.0' },
       signal: AbortSignal.timeout(8000),
     });
     onResponse?.(res);
 
     if (!res.ok) {
-      console.error(`[IMGverse/inaturalist] HTTP ${res.status} for q="${query}"`);
+      console.error(`[SISE/inaturalist] HTTP ${res.status} for q="${query}"`);
       return [];
     }
 
     const data = await res.json();
     return mapObservations(data.results);
   } catch (err) {
-    console.error(`[IMGverse/inaturalist] search failed for q="${query}":`, err.message);
+    console.error(`[SISE/inaturalist] search failed for q="${query}":`, err.message);
     onError?.(err);
     return [];
   }

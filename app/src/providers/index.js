@@ -1,6 +1,6 @@
 // =============================================================================
 // src/providers/index.js
-// IMGverse Search — Provider aggregator (Search Controller).
+// SISE — Provider aggregator (Search Controller).
 // Fans out to all active providers simultaneously, then interleaves results
 // round-robin to preserve each provider's relevance ranking.
 //
@@ -14,7 +14,7 @@
 // receive the param; every group is also filtered with the shared rules in
 // public/image-shape.js (Pixabay has no native "square").
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -32,7 +32,7 @@ import { createRateBudget, limitsFromEnv } from '../lib/rate-budget.js';
 /** Each provider returns up to this many results per page. */
 export const RESULTS_PER_PROVIDER = 20;
 
-const CACHE_PREFIX = 'imgverse:search';
+const CACHE_PREFIX = 'sise:search';
 
 /**
  * Build a search function over the given providers.
@@ -70,7 +70,7 @@ export function createSearchAll({ providers, budget, cache, ttlSeconds = 3600 })
       if (!gate.ok) {
         const resumeAt = new Date(gate.resumeAt).toISOString();
         providerStatus[p.name] = { status: 'paused', resumeAt };
-        console.warn(`[IMGverse/budget] ${p.name} paused until ${resumeAt}, skipped for q="${query}"`);
+        console.warn(`[SISE/budget] ${p.name} paused until ${resumeAt}, skipped for q="${query}"`);
         return [];
       }
 
@@ -89,7 +89,7 @@ export function createSearchAll({ providers, budget, cache, ttlSeconds = 3600 })
           onError: () => { reportedError = true; },
         });
       } catch (err) {
-        console.error(`[IMGverse/providers] ${p.name} rejected for q="${query}":`, err?.message || err);
+        console.error(`[SISE/providers] ${p.name} rejected for q="${query}":`, err?.message || err);
         providerStatus[p.name] = { status: 'error' };
         return [];
       }
@@ -109,7 +109,7 @@ export function createSearchAll({ providers, budget, cache, ttlSeconds = 3600 })
         providerStatus[p.name] = { status: 'error' };
       } else {
         providerStatus[p.name] = { status: 'ok' };
-        console.warn(`[IMGverse/providers] ${p.name} returned 0 results for q="${query}" page=${page}`);
+        console.warn(`[SISE/providers] ${p.name} returned 0 results for q="${query}" page=${page}`);
       }
       return group;
     }));

@@ -1,10 +1,10 @@
 # =============================================================================
 # nginx/default.conf.template
-# IMGverse Search — Nginx reverse proxy configuration.
+# SISE — Nginx reverse proxy configuration.
 # Handles X-Forwarded-Proto from Traefik (same pattern as KSM WPDokploystack).
 # Proxies all requests to the Node.js app container on the internal network.
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 

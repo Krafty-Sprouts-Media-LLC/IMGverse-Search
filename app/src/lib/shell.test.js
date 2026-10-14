@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/shell.test.js
-// IMGverse Search — Tests for tab routing helpers.
+// SISE — Tests for tab routing helpers.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 

@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/bulk-queue.test.js
-// IMGverse Search — Tests for the bulk keyword queue.
+// SISE — Tests for the bulk keyword queue.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 

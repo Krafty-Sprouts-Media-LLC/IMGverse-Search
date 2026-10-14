@@ -2,10 +2,10 @@ name: Build and Push Docker Images
 
 # =============================================================================
 # build-images.yml
-# IMGverse Search — Build and push app + nginx images to GHCR on every
+# SISE — Build and push app + nginx images to GHCR on every
 # push to main that touches source files. Mirrors KSM WPDokploystack pattern.
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 

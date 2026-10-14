@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/rate-budget.test.js
-// IMGverse Search — Tests for per-provider rate budgets.
+// SISE — Tests for per-provider rate budgets.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 
@@ -98,7 +98,7 @@ describe('createRateBudget 429 handling', () => {
     assert.equal(gate.ok, false);
     assert.equal(gate.resumeAt, 1_000_000 + HOUR);
     assert.equal(warnCalls.length, 1);
-    assert.match(String(warnCalls[0][0]), /^\[IMGverse\/budget\] pexels returned 429, paused until /);
+    assert.match(String(warnCalls[0][0]), /^\[SISE\/budget\] pexels returned 429, paused until /);
     c.advance(50 * MINUTE);
     assert.deepEqual(b.canCall('pexels'), { ok: true });
   });

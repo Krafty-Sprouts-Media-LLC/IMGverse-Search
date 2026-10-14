@@ -1,11 +1,11 @@
 // =============================================================================
 // src/providers/unsplash.js
-// IMGverse Search — Unsplash provider adapter.
+// SISE — Unsplash provider adapter.
 // Requires UNSPLASH_KEY env var. Free tier: 50 req/hour.
 // AVIF/WebP/JPEG — served natively from the provider CDN (no conversion).
 // Docs: https://unsplash.com/documentation
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -44,7 +44,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
     onResponse?.(res);
 
     if (!res.ok) {
-      console.error(`[IMGverse/unsplash] HTTP ${res.status} for q="${query}"`);
+      console.error(`[SISE/unsplash] HTTP ${res.status} for q="${query}"`);
       return [];
     }
 
@@ -65,7 +65,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
       })
     );
   } catch (err) {
-    console.error(`[IMGverse/unsplash] search failed for q="${query}":`, err.message);
+    console.error(`[SISE/unsplash] search failed for q="${query}":`, err.message);
     onError?.(err);
     return [];
   }

@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/image-shape.test.js
-// IMGverse Search — Tests for shared image shape / orientation rules.
+// SISE — Tests for shared image shape / orientation rules.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.36
 // =============================================================================
 

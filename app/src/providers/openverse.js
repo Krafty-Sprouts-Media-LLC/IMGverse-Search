@@ -1,13 +1,13 @@
 // =============================================================================
 // src/providers/openverse.js
-// IMGverse Search — Openverse provider adapter (server-side).
+// SISE — Openverse provider adapter (server-side).
 // Production search uses the browser (`app/public/openverse-client.js`) because
 // Cloudflare challenges datacenter IPs — including OAuth token requests.
 // This adapter remains for local/non-blocked hosts. Do not re-add it to
 // searchAll() on a VPS that gets "Just a moment..." HTML.
 // Docs: https://api.openverse.org/v1/
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -18,7 +18,7 @@ import { normalize } from '../utils.js';
 import { getOpenverseToken, isOpenverseBlocked } from './openverse-auth.js';
 
 const BASE = 'https://api.openverse.org/v1/images/';
-const UA   = 'IMGverse-Search/1.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+const UA   = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
 
 /**
  * Build request headers, attaching OAuth Bearer token when configured.
@@ -49,7 +49,7 @@ function logAccessDenied(status) {
 
   if (status === 403 && !hasCreds) {
     console.error(
-      '[IMGverse/openverse] HTTP 403 — anonymous API access is blocked from this server IP '
+      '[SISE/openverse] HTTP 403 — anonymous API access is blocked from this server IP '
       + '(common on Hetzner/VPS hosts). Register a free OAuth app at '
       + 'https://api.openverse.org/v1/auth_tokens/register/ then set OPENVERSE_CLIENT_ID '
       + 'and OPENVERSE_CLIENT_SECRET in your environment.'
@@ -62,13 +62,13 @@ function logAccessDenied(status) {
       return; // full block already logged by openverse-auth.js
     }
     console.error(
-      '[IMGverse/openverse] HTTP 403 with OAuth credentials — verify the app email at '
+      '[SISE/openverse] HTTP 403 with OAuth credentials — verify the app email at '
       + 'https://api.openverse.org/v1/auth_tokens/register/ and confirm the client ID/secret.'
     );
     return;
   }
 
-  console.error(`[IMGverse/openverse] API returned HTTP ${status}`);
+  console.error(`[SISE/openverse] API returned HTTP ${status}`);
 }
 
 /**
@@ -92,7 +92,7 @@ export async function search(query, page = 1) {
 
     if (!res.ok) {
       logAccessDenied(res.status);
-      console.error(`[IMGverse/openverse] Request failed for q="${query}" page=${page}`);
+      console.error(`[SISE/openverse] Request failed for q="${query}" page=${page}`);
       return [];
     }
 
@@ -113,7 +113,7 @@ export async function search(query, page = 1) {
       })
     );
   } catch (err) {
-    console.error(`[IMGverse/openverse] Search failed for q="${query}" page=${page}:`, err.message);
+    console.error(`[SISE/openverse] Search failed for q="${query}" page=${page}:`, err.message);
     return [];
   }
 }

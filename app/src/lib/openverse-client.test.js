@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/openverse-client.test.js
-// IMGverse Search — Tests for browser-side Openverse search helpers.
+// SISE — Tests for browser-side Openverse search helpers.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.33
 // =============================================================================
 

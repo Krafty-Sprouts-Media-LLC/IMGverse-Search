@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/search-client.test.js
-// IMGverse Search — Tests for the shared server + Openverse search client.
+// SISE — Tests for the shared server + Openverse search client.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 
@@ -128,7 +128,7 @@ describe('searchAllSources', () => {
     const fetchImpl = fakeFetch({ serverStatus: 500, serverBody: { error: 'boom' } });
     const out = await searchAllSources({ q: 'salmon', fetchImpl });
     assert.deepEqual(out.results.map((r) => r.provider), ['openverse']);
-    assert.ok(errors.some((e) => e.startsWith('[IMGverse/search]') && e.includes('boom')));
+    assert.ok(errors.some((e) => e.startsWith('[SISE/search]') && e.includes('boom')));
   });
 
   it('reports the Openverse error without throwing', async () => {

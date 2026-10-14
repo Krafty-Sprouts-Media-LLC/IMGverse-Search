@@ -1,11 +1,11 @@
 // =============================================================================
 // src/providers/flickr.js
-// IMGverse Search — Flickr provider adapter.
+// SISE — Flickr provider adapter.
 // Requires FLICKR_KEY env var. Searches CC-licensed photos only.
 // Create a key: https://www.flickr.com/services/apps/create/
 // Docs: https://www.flickr.com/services/api/flickr.photos.search.html
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.16
 // =============================================================================
 
@@ -59,14 +59,14 @@ export async function search(query, page = 1) {
     });
 
     if (!res.ok) {
-      console.error(`[IMGverse/flickr] API returned HTTP ${res.status} for q="${query}" page=${page}`);
+      console.error(`[SISE/flickr] API returned HTTP ${res.status} for q="${query}" page=${page}`);
       return [];
     }
 
     const data = await res.json();
 
     if (data.stat !== 'ok') {
-      console.error(`[IMGverse/flickr] API error for q="${query}":`, data.message || data.code);
+      console.error(`[SISE/flickr] API error for q="${query}":`, data.message || data.code);
       return [];
     }
 
@@ -96,7 +96,7 @@ export async function search(query, page = 1) {
       })
       .filter(Boolean);
   } catch (err) {
-    console.error(`[IMGverse/flickr] Search failed for q="${query}" page=${page}:`, err.message);
+    console.error(`[SISE/flickr] Search failed for q="${query}" page=${page}:`, err.message);
     return [];
   }
 }

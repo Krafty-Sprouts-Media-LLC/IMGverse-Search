@@ -3,7 +3,7 @@
  * salmon") contain question words that stock providers would match
  * literally; this keeps the subject ("cooked salmon"). Rule-based, no AI.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   2.0.0
  */
 

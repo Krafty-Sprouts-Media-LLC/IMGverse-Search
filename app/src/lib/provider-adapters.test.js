@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/provider-adapters.test.js
-// IMGverse Search — Tests for provider adapter response reporting.
+// SISE — Tests for provider adapter response reporting.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 
@@ -81,14 +81,14 @@ describe('provider adapters', () => {
     assert.deepEqual(images, []);
     assert.equal(status, 429);
     assert.equal(errors.length, 1);
-    assert.match(errors[0], /^\[IMGverse\/pixabay\] HTTP 429 for q="kiwi"/);
+    assert.match(errors[0], /^\[SISE\/pixabay\] HTTP 429 for q="kiwi"/);
   });
 
   it('logs and returns [] when fetch throws', async () => {
     const fetchImpl = async () => { throw new Error('socket hang up'); };
     const images = await pexels('rice', 1, '', { fetchImpl });
     assert.deepEqual(images, []);
-    assert.match(errors[0], /^\[IMGverse\/pexels\] search failed for q="rice": socket hang up/);
+    assert.match(errors[0], /^\[SISE\/pexels\] search failed for q="rice": socket hang up/);
   });
 
   it('inaturalist reports the response and ignores orientation', async () => {

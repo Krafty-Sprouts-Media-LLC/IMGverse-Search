@@ -1,10 +1,10 @@
 // =============================================================================
 // src/utils.js
-// IMGverse Search — Shared utility functions.
+// SISE — Shared utility functions.
 // Provides URL encoding helpers and the canonical ImageResult normalizer
 // so every provider adapter returns a consistent object shape.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 

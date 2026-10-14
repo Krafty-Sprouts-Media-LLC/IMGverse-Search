@@ -3,7 +3,7 @@
  * sidebar, keyboard, scrolling, provider budgets and downloads. All search
  * logic lives in bulk-queue.js / search-client.js; this file is DOM only.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   2.0.0
  */
 
@@ -429,7 +429,7 @@ function pollStatus() {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             budgets = await res.json();
         } catch (err) {
-            console.error('[IMGverse/bulk] provider status failed:', err.message);
+            console.error('[SISE/bulk] provider status failed:', err.message);
         }
         renderProviders();
         renderRunbar();

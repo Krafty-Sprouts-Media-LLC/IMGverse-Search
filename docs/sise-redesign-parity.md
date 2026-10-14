@@ -14,7 +14,7 @@ Source of truth for each item is listed so nothing is ported from memory.
 - [ ] Server search (`/api/search` with `q`, `page`, `providers`, `orientation`) runs in parallel with browser-side Openverse (`fetchPage`)
 - [ ] Openverse woven in at ~1 in 5 (`weaveOpenverse`), duplicates removed (`dedupeClientResults`)
 - [ ] Stale responses ignored when a newer search started (`searchToken`)
-- [ ] Openverse errors logged with `[IMGverse/openverse]` (prefix becomes `[SISE/...]` after rename)
+- [ ] Openverse errors logged with `[SISE/openverse]` (prefix becomes `[SISE/...]` after rename)
 - [ ] Loader while fetching; empty state with message when nothing found (`showEmptyState`)
 
 ## Pagination
@@ -52,10 +52,11 @@ Source of truth for each item is listed so nothing is ported from memory.
 
 ## Rename (IMGverse → SISE) side effects to handle
 
-- [ ] sessionStorage keys `imgverse:*` (opened, legacy saved, batch keywords/selections/query): migrate old keys on first load like `LEGACY_SAVED_STORAGE_KEY` does, so users don't lose state
-- [ ] Log prefixes `[IMGverse/...]` and the AGENTS.md convention
-- [ ] Redis cache key prefix `imgverse:search:` (old keys just expire after 1h)
-- [ ] Provider `User-Agent` strings, page `<title>`, meta description, favicon, `meta.json`, README, repo and deploy names
+- [x] sessionStorage keys `imgverse:*` (opened, legacy saved, batch keywords/selections/query): migrate old keys on first load like `LEGACY_SAVED_STORAGE_KEY` does, so users don't lose state (`migrateKeys` in `app.js`)
+- [x] Log prefixes `[SISE/...]` and the AGENTS.md convention
+- [x] Redis cache key prefix `sise:search:` (old keys just expire after 1h)
+- [x] Provider `User-Agent` strings, page `<title>`, meta description, `meta.json` name, README
+- [ ] **Manual (owner):** rename the GitHub repo, then update `meta.json` links/id and README URLs; GHCR image names (`build-images.yml`) and the Dokploy app/volume names only when you choose to migrate the deployment
 
 ## Known bugs to fix during the port (found 14/10/2026)
 

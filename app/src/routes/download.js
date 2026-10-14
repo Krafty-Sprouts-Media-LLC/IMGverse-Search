@@ -1,10 +1,10 @@
 // =============================================================================
 // src/routes/download.js
-// IMGverse Search — GET /download named image attachment route.
+// SISE — GET /download named image attachment route.
 // Same whitelist and encode pipeline as /proxy, but sets Content-Disposition
 // so the browser saves with the requested filename (batch queue downloads).
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.26
 // =============================================================================
 
@@ -65,13 +65,13 @@ router.get('/', async (req, res) => {
   } catch (err) {
     if (err.status) {
       if (err.status >= 500 || err.status === 403) {
-        console.error(`[IMGverse/download] ${err.message} for ${err.hostname || 'unknown host'}`);
+        console.error(`[SISE/download] ${err.message} for ${err.hostname || 'unknown host'}`);
       }
       return res.status(err.status).send(err.message);
     }
 
     const detail = err.message || err.cause?.message || err.cause?.code || err.code || String(err);
-    console.error('[IMGverse/download] Error: request failed, reason:', detail);
+    console.error('[SISE/download] Error: request failed, reason:', detail);
     return res.status(500).send('Download error.');
   }
 });

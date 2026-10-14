@@ -1,10 +1,10 @@
 // =============================================================================
 // src/routes/search.js
-// IMGverse Search — GET /api/search route.
+// SISE — GET /api/search route.
 // Fans out to all providers via searchAll, which caches per provider and
 // applies rate budgets; the response reports each provider's status.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 

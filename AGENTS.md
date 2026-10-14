@@ -1,7 +1,7 @@
-<!-- AGENTS.md — IMGverse Search agent instructions -->
+<!-- AGENTS.md — SISE agent instructions -->
 # AGENTS.md
 
-Instructions for AI agents and contributors working on **IMGverse Search**.
+Instructions for AI agents and contributors working on **SISE** (Stock image search engine; formerly IMGverse Search).
 
 ## Versioning and releases (required)
 
@@ -35,7 +35,7 @@ Instructions for AI agents and contributors working on **IMGverse Search**.
 
 - **KISS / YAGNI / DRY** — smallest correct change; no speculative features.
 - **WordPress-style file headers** on new or substantially edited source files.
-- **No silent failures** — provider and proxy errors must log with `[IMGverse/...]` prefixes.
+- **No silent failures** — provider and proxy errors must log with `[SISE/...]` prefixes.
 - **No mock data in production code** — use real provider APIs.
 - **Do not modify `@since` tags** when editing existing code.
 
@@ -44,10 +44,17 @@ Instructions for AI agents and contributors working on **IMGverse Search**.
 | Path | Purpose |
 |------|---------|
 | `app/src/providers/` | Provider adapters (iNaturalist, Unsplash, Pexels, Pixabay; Openverse server adapter unused on blocked hosts) |
-| `app/src/routes/search.js` | Search API + Redis cache (not Openverse) |
+| `app/src/providers/index.js` | Search aggregator: per-provider Redis cache, rate budgets, `providerStatus` |
+| `app/src/lib/rate-budget.js` | Per-provider rate limits (headers, 429 pauses) |
+| `app/src/routes/search.js` | `GET /api/search` (not Openverse) |
+| `app/src/routes/providers.js` | `GET /api/providers/status` (budgets for the UI) |
 | `app/src/routes/proxy.js` | Image proxy whitelist and JPEG conversion |
 | `app/public/openverse-client.js` | Browser Openverse search (avoids Cloudflare on VPS IPs) |
-| `app/public/app.js` | Frontend search UI |
+| `app/public/search-client.js` | Server + Openverse search used by both tabs |
+| `app/public/app.js` | Frontend entry: storage migration, tabs, both modes |
+| `app/public/search-mode.js` | Search tab (filters, pagination, click-order batch panel) |
+| `app/public/bulk-mode.js`, `bulk-queue.js`, `query-cleaner.js` | Bulk keywords tab |
+| `docs/sise-redesign-parity.md` | Every Search-tab behaviour that must keep working |
 | `CHANGELOG.md` | Release notes (source for GitHub Releases) |
 | `meta.json` | Stack metadata and current version |
 

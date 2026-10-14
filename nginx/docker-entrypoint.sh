@@ -1,11 +1,11 @@
 #!/bin/sh
 # =============================================================================
 # nginx/docker-entrypoint.sh
-# IMGverse Search — Nginx entrypoint.
+# SISE — Nginx entrypoint.
 # Processes the config template with envsubst before starting nginx.
 # Mirrors KSM WPDokploystack nginx/docker-entrypoint.sh pattern.
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 

@@ -1,10 +1,10 @@
 // =============================================================================
 // src/providers/pixabay.js
-// IMGverse Search — Pixabay provider adapter.
+// SISE — Pixabay provider adapter.
 // Requires PIXABAY_KEY env var. Free tier: 100 req/hour.
 // Docs: https://pixabay.com/api/docs/
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -47,7 +47,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
     onResponse?.(res);
 
     if (!res.ok) {
-      console.error(`[IMGverse/pixabay] HTTP ${res.status} for q="${query}"`);
+      console.error(`[SISE/pixabay] HTTP ${res.status} for q="${query}"`);
       return [];
     }
 
@@ -68,7 +68,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
       })
     );
   } catch (err) {
-    console.error(`[IMGverse/pixabay] search failed for q="${query}":`, err.message);
+    console.error(`[SISE/pixabay] search failed for q="${query}":`, err.message);
     onError?.(err);
     return [];
   }

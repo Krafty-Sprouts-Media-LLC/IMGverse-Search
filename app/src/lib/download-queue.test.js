@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/download-queue.test.js
-// IMGverse Search — Tests for the sequential named-download queue.
+// SISE — Tests for the sequential named-download queue.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 

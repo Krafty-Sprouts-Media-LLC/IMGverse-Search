@@ -1,10 +1,10 @@
 // =============================================================================
 // src/cache.js
-// IMGverse Search — Redis cache wrapper (ioredis).
+// SISE — Redis cache wrapper (ioredis).
 // Provides get/set with TTL. Used by the search route to avoid redundant
 // provider API calls within the 1-hour window.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -19,7 +19,7 @@ const client = new Redis(process.env.REDIS_URL || 'redis://redis:6379', {
 });
 
 client.on('error', (err) => {
-  console.warn('[IMGverse/cache] Redis error (search will run uncached):', err.message);
+  console.warn('[SISE/cache] Redis error (search will run uncached):', err.message);
 });
 
 /**

@@ -3,7 +3,7 @@
  * Failures must be named in the UI so the user can retry them —
  * console-only errors are not enough.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   1.0.34
  */
 

@@ -1,11 +1,11 @@
 // =============================================================================
 // src/routes/proxy.js
-// IMGverse Search — GET /proxy image proxy route.
+// SISE — GET /proxy image proxy route.
 // Fetches images from provider CDNs server-side, converts via sharp,
 // streams with no Content-Disposition so the browser displays the raw image
 // in a new tab for right-click Save-As.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -40,13 +40,13 @@ router.get('/', async (req, res) => {
   } catch (err) {
     if (err.status) {
       if (err.status >= 500 || err.status === 403) {
-        console.error(`[IMGverse/proxy] ${err.message} for ${err.hostname || 'unknown host'}`);
+        console.error(`[SISE/proxy] ${err.message} for ${err.hostname || 'unknown host'}`);
       }
       return res.status(err.status).send(err.message);
     }
 
     const detail = err.message || err.cause?.message || err.cause?.code || err.code || String(err);
-    console.error('[IMGverse/proxy] Error: request failed, reason:', detail);
+    console.error('[SISE/proxy] Error: request failed, reason:', detail);
     return res.status(500).send('Proxy error.');
   }
 });

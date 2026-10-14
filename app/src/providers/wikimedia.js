@@ -1,10 +1,10 @@
 // =============================================================================
 // src/providers/wikimedia.js
-// IMGverse Search — Wikimedia Commons provider adapter.
+// SISE — Wikimedia Commons provider adapter.
 // Free, no API key. CC-licensed / public domain media.
 // Docs: https://www.mediawiki.org/wiki/API:Search
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.15
 // =============================================================================
 
@@ -14,7 +14,7 @@ import fetch from 'node-fetch';
 import { normalize } from '../utils.js';
 
 const API = 'https://commons.wikimedia.org/w/api.php';
-const UA  = 'IMGverse-Search/1.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+const UA  = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
 
 /**
  * Strip a Commons /thumb/ scaled URL back to the original upload URL.
@@ -83,7 +83,7 @@ export async function search(query, page = 1) {
     });
 
     if (!res.ok) {
-      console.error(`[IMGverse/wikimedia] API returned HTTP ${res.status} for q="${query}" page=${page}`);
+      console.error(`[SISE/wikimedia] API returned HTTP ${res.status} for q="${query}" page=${page}`);
       return [];
     }
 
@@ -121,7 +121,7 @@ export async function search(query, page = 1) {
       })
       .filter(Boolean);
   } catch (err) {
-    console.error(`[IMGverse/wikimedia] Search failed for q="${query}" page=${page}:`, err.message);
+    console.error(`[SISE/wikimedia] Search failed for q="${query}" page=${page}:`, err.message);
     return [];
   }
 }

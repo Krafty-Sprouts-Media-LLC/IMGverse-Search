@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # tests/smoke-test.sh
-# IMGverse Search — Integration smoke test.
+# SISE — Integration smoke test.
 # Brings up the full stack and verifies:
 #   - All containers healthy (nginx, app, redis)
 #   - /healthz returns 200 from nginx
@@ -12,7 +12,7 @@
 #   bash tests/smoke-test.sh
 #   bash tests/smoke-test.sh --keep   # leave stack running after test
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 

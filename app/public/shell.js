@@ -1,7 +1,7 @@
 /**
  * App shell: Search / Bulk keywords tabs with URL-hash routing.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   2.0.0
  */
 

@@ -2,10 +2,10 @@ name: Stack Smoke Test
 
 # =============================================================================
 # smoke-test.yml
-# IMGverse Search — Integration test: full Docker Compose stack verification.
+# SISE — Integration test: full Docker Compose stack verification.
 # Mirrors KSM WPDokploystack smoke-test.yml pattern.
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 

@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/batch-helpers.test.js
-// IMGverse Search — Tests for batch download failure reporting.
+// SISE — Tests for batch download failure reporting.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.34
 // =============================================================================
 

@@ -6,7 +6,7 @@
  * from the user's browser instead; this app does the same. Proxy/download
  * of full-size files still go through the server (Flickr/Wikimedia/etc.).
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   1.0.33
  */
 

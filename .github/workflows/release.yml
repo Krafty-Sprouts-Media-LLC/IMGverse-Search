@@ -2,11 +2,11 @@ name: Create GitHub Release on Tag
 
 # =============================================================================
 # release.yml
-# IMGverse Search — Automatically creates a GitHub Release with formatted
+# SISE — Automatically creates a GitHub Release with formatted
 # notes whenever a version tag (v*.*.*) is pushed. Extracts the relevant
 # section from CHANGELOG.md. Mirrors KSM WPDokploystack release.yml pattern.
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 
@@ -63,7 +63,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: "IMGverse Search ${{ steps.version.outputs.tag }}"
+          name: "SISE ${{ steps.version.outputs.tag }}"
           body_path: release_notes.txt
           prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
           make_latest: true

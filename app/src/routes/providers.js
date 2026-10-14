@@ -1,9 +1,9 @@
 // =============================================================================
 // src/routes/providers.js
-// IMGverse Search — GET /api/providers/status: per-provider rate budgets.
+// SISE — GET /api/providers/status: per-provider rate budgets.
 // Used by the UI to show requests left and paused providers.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 

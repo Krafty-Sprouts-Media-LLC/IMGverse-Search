@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/safe-storage.test.js
-// IMGverse Search — Tests for the throw-proof sessionStorage wrapper.
+// SISE — Tests for the throw-proof sessionStorage wrapper.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.36
 // =============================================================================
 
@@ -129,7 +129,7 @@ describe('safe-storage with blocked storage', () => {
         assert.equal(mod.storageGet('a'), null);
       });
       assert.equal(calls.length, 1);
-      assert.ok(String(calls[0][0]).startsWith('[IMGverse/storage]'));
+      assert.ok(String(calls[0][0]).startsWith('[SISE/storage]'));
     } finally {
       delete globalThis.sessionStorage;
     }

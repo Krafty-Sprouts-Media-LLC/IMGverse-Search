@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/query-cleaner.test.js
-// IMGverse Search — Tests for keyword → image search query cleaning.
+// SISE — Tests for keyword → image search query cleaning.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 

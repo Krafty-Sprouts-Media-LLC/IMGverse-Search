@@ -3,7 +3,7 @@
  * result cards ("Open full image", Opened marks) and the click-order batch
  * download panel. Moved unchanged from app.js (v2.0.0 Part 2).
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   1.0.0
  */
 
@@ -502,7 +502,7 @@ async function fetchPage() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     } catch (err) {
-        console.error('[IMGverse]', err.message);
+        console.error('[SISE]', err.message);
         if (currentPage === 1) showEmptyState();
     } finally {
         // Only the newest request may end the loading state.

@@ -1,6 +1,6 @@
 // =============================================================================
 // src/providers/openverse-auth.js
-// IMGverse Search — Openverse OAuth2 client-credentials token helper.
+// SISE — Openverse OAuth2 client-credentials token helper.
 // Datacenter IPs (Hetzner, many VPS hosts) often get HTTP 403 from Cloudflare
 // on anonymous requests. Registered OAuth apps receive Bearer tokens that
 // bypass this block — unless Cloudflare blocks the token endpoint too.
@@ -8,7 +8,7 @@
 // Register: POST https://api.openverse.org/v1/auth_tokens/register/
 // Docs:     https://docs.openverse.org/api/reference/authentication_and_throttling.html
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.9
 // =============================================================================
 
@@ -17,7 +17,7 @@
 import fetch from 'node-fetch';
 
 const TOKEN_URL = 'https://api.openverse.org/v1/auth_tokens/token/';
-const UA = 'IMGverse-Search/1.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+const UA = 'SISE/2.0 (https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
 
 /** @type {string|null} */
 let cachedToken = null;
@@ -91,13 +91,13 @@ export async function getOpenverseToken() {
       if (isCloudflareChallenge(text)) {
         cloudflareBlocked = true;
         console.error(
-          '[IMGverse/openverse] Cloudflare is blocking ALL Openverse API traffic from this server IP '
+          '[SISE/openverse] Cloudflare is blocking ALL Openverse API traffic from this server IP '
           + '(including OAuth token requests). Openverse cannot run on this host — use Wikimedia, '
           + 'Unsplash, Pexels, or Pixabay instead. See docs/OPENVERSE-OAUTH.md.'
         );
         return null;
       }
-      console.error(`[IMGverse/openverse] Token request failed HTTP ${res.status}: ${text.slice(0, 200)}`);
+      console.error(`[SISE/openverse] Token request failed HTTP ${res.status}: ${text.slice(0, 200)}`);
       return null;
     }
 
@@ -106,7 +106,7 @@ export async function getOpenverseToken() {
     tokenExpiresAt = now + (data.expires_in || 3600) * 1000;
     return cachedToken;
   } catch (err) {
-    console.error('[IMGverse/openverse] Token request failed:', err.message);
+    console.error('[SISE/openverse] Token request failed:', err.message);
     return null;
   }
 }

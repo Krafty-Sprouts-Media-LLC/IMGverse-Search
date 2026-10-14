@@ -1,9 +1,9 @@
 // =============================================================================
 // src/server.js
-// IMGverse Search — Express application entry point.
+// SISE — Express application entry point.
 // Mounts all routes, serves public/ as static files.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -53,13 +53,13 @@ app.get('/healthz', (_req, res) => {
 // Start
 // ---------------------------------------------------------------------------
 app.listen(PORT, () => {
-  console.log(`[IMGverse] Server running on port ${PORT}`);
+  console.log(`[SISE] Server running on port ${PORT}`);
 });
 
 async function gracefulShutdown(signal) {
-  console.log(`[IMGverse] ${signal} received, shutting down…`);
+  console.log(`[SISE] ${signal} received, shutting down…`);
   await shutdownExiftool().catch((err) => {
-    console.error('[IMGverse] exiftool shutdown error:', err.message);
+    console.error('[SISE] exiftool shutdown error:', err.message);
   });
   process.exit(0);
 }

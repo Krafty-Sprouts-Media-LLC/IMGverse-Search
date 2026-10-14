@@ -1,9 +1,9 @@
-<!-- docs/STOCK-PROVIDERS.md — Stock image provider reference for IMGverse Search -->
+<!-- docs/STOCK-PROVIDERS.md — Stock image provider reference for SISE -->
 # Stock Image Providers
 
-Current and candidate providers for IMGverse Search.
+Current and candidate providers for SISE.
 
-## Active in IMGverse Search
+## Active in SISE
 
 | Provider | API key | Notes |
 |----------|---------|-------|

@@ -1,9 +1,9 @@
 /* =============================================================================
  * app.js
- * IMGverse Search — Vanilla JS frontend entry point.
+ * SISE — Vanilla JS frontend entry point.
  * Boots the tabbed shell, the Search tab and the Bulk keywords tab.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   1.0.0
  * ============================================================================= */
 

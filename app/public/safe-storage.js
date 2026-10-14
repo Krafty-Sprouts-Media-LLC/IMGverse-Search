@@ -6,7 +6,7 @@
  * exceeded, data: URLs). The UI must keep working without it, so every
  * call here returns a safe value and logs the first failure once.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   1.0.36
  */
 
@@ -18,7 +18,7 @@ function warnOnce(action, key, err) {
   if (warned) return;
   warned = true;
   console.warn(
-    `[IMGverse/storage] ${action} "${key}" failed; batch selections and Opened marks will not survive a reload:`,
+    `[SISE/storage] ${action} "${key}" failed; batch selections and Opened marks will not survive a reload:`,
     err?.message || err
   );
 }

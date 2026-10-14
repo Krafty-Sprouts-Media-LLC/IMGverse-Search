@@ -1,11 +1,11 @@
 // =============================================================================
 // lib/attribution.js
-// IMGverse Search — Build attribution captions and embed IPTC Caption on downloads.
+// SISE — Build attribution captions and embed IPTC Caption on downloads.
 //
 // Caption format (IPTC Caption-Abstract only — no Description, no URL, no license dump):
 //   Photo by {credit} / {Provider}
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.27
 // =============================================================================
 
@@ -82,7 +82,7 @@ export async function embedAttributionInJpeg(jpegBuffer, fields) {
   const caption = buildAttributionCaption(fields);
   if (!caption) return jpegBuffer;
 
-  const tmpPath = join(tmpdir(), `imgverse-${randomBytes(8).toString('hex')}.jpg`);
+  const tmpPath = join(tmpdir(), `sise-${randomBytes(8).toString('hex')}.jpg`);
 
   try {
     await writeFile(tmpPath, jpegBuffer);
@@ -93,7 +93,7 @@ export async function embedAttributionInJpeg(jpegBuffer, fields) {
 
     return await readFile(tmpPath);
   } catch (err) {
-    console.error('[IMGverse/attribution] Failed to embed IPTC caption:', err.message);
+    console.error('[SISE/attribution] Failed to embed IPTC caption:', err.message);
     return jpegBuffer;
   } finally {
     await unlink(tmpPath).catch(() => {});

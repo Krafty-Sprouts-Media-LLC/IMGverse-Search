@@ -1,11 +1,11 @@
 // =============================================================================
 // src/lib/rate-budget.js
-// IMGverse Search — Per-provider rate budgets.
+// SISE — Per-provider rate budgets.
 // Counts calls per provider per window, honours provider rate-limit headers
 // and 429 responses, and reports which providers are paused. In memory:
 // the stack runs a single app process (see v2.0.0 Part 1 plan ruling).
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 
@@ -115,7 +115,7 @@ export function createRateBudget({ limits = DEFAULT_LIMITS, now = () => Date.now
         ? t + retryAfter * 1000
         : (resetAt ?? s.windowStart + cfg.windowMs);
       s.pausedUntil = Math.max(s.pausedUntil, until);
-      console.warn(`[IMGverse/budget] ${name} returned 429, paused until ${new Date(s.pausedUntil).toISOString()}`);
+      console.warn(`[SISE/budget] ${name} returned 429, paused until ${new Date(s.pausedUntil).toISOString()}`);
     }
   }
 

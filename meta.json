@@ -1,9 +1,9 @@
 [
   {
     "id": "imgverse-search",
-    "name": "IMGverse Search",
-    "version": "1.0.36",
-    "description": "Self-hosted stock image aggregator. Merges Openverse, iNaturalist, Unsplash, Pexels, and Pixabay into one fast search UI with right-click native image saving.",
+    "name": "SISE",
+    "version": "2.0.0",
+    "description": "SISE (Stock image search engine): self-hosted stock image aggregator. Searches Openverse, iNaturalist, Unsplash, Pexels and Pixabay at once, and turns keyword lists into one image per keyword, named after the keyword.",
     "links": {
       "github": "https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search",
       "docs": "https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search#readme"

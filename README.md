@@ -1,6 +1,11 @@
-# IMGverse Search
+# SISE — Stock image search engine
 
-Self-hosted stock image aggregator. One search across Openverse, iNaturalist, Unsplash, Pexels, and Pixabay — images served directly from each provider's CDN in their native format.
+*Formerly IMGverse Search.*
+
+Self-hosted stock image aggregator with two modes:
+
+- **Search** — one search across Openverse, iNaturalist, Unsplash, Pexels and Pixabay, images served directly from each provider's CDN, with a click-order batch download.
+- **Bulk keywords** — paste a keyword list (e.g. "can you freeze cooked salmon"); each keyword gets its own row with a cleaned search query, the best image is picked for you, and Download saves one file per keyword, named after the keyword. Only rows near where you are reading are searched, and each provider's rate limit is tracked so a paused provider never blocks the run.
 
 Deployed as a single Dokploy Docker Compose stack. Same zero-stress pattern as KSM WPDokploystack.
 
@@ -12,7 +17,7 @@ Deployed as a single Dokploy Docker Compose stack. Same zero-stress pattern as K
 |---------|-------------|
 | **nginx** | Reverse proxy — only container on `dokploy-network`. Traefik handles SSL. |
 | **app** | Node.js/Express — search aggregator, image proxy, static file server |
-| **redis** | Search result cache — 1hr TTL per query key |
+| **redis** | Search result cache — 1 hr TTL, one entry per provider per query |
 
 ---
 
@@ -59,7 +64,7 @@ No format conversion. No proxy in the normal user flow. Images are exactly what 
    ```
    https://raw.githubusercontent.com/Krafty-Sprouts-Media-LLC/IMGverse-Search/main
    ```
-3. Find **IMGverse Search** and click **Create**
+3. Find **SISE** and click **Create**
 4. Add your API keys in the **Environment** tab
 5. Click **Deploy**
 
@@ -144,6 +149,14 @@ open http://localhost
 
 ## Running Tests
 
+Unit tests (no Docker needed):
+
+```bash
+cd app && npm test
+```
+
+Full-stack smoke test:
+
 ```bash
 bash tests/smoke-test.sh
 ```
@@ -151,7 +164,8 @@ bash tests/smoke-test.sh
 Verifies:
 - All containers healthy
 - `/healthz` returns 200
-- `/api/search?q=cat` returns valid JSON
+- `/api/search?q=cat` returns valid JSON with `providerStatus`
+- `/api/providers/status` lists provider budgets
 - `/proxy` returns a JPEG image
 
 ---
@@ -161,8 +175,8 @@ Verifies:
 - Shutterstock / Adobe Stock / Getty adapters (paid keys)
 - User accounts + saved collections
 - Bunny CDN as proxy cache layer
-- WordPress plugin to insert IMGverse images directly into posts
+- WordPress plugin to insert SISE images directly into posts
 
 ---
 
-*IMGverse Search — built for speed, deployed like WordPress.*
+*SISE — built for speed, deployed like WordPress.*

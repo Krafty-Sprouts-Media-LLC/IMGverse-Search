@@ -4,7 +4,7 @@
  * paused (rate limits) are remembered per row and topped up later, so a
  * paused provider never blocks the run. No DOM; bulk-mode.js renders it.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   2.0.0
  */
 
@@ -122,7 +122,7 @@ export function createBulkQueue({
       }
     } catch (err) {
       if (!stale()) {
-        console.error('[IMGverse/bulk] search failed for', JSON.stringify(row.query), err?.message || err);
+        console.error('[SISE/bulk] search failed for', JSON.stringify(row.query), err?.message || err);
         row.state = 'error';
         row.error = err?.message || 'Search failed';
         row.images = [];
@@ -172,7 +172,7 @@ export function createBulkQueue({
         if (row.pick == null) row.pick = autoPick(row.images, orientation);
       }
     } catch (err) {
-      console.error(`[IMGverse/bulk] ${provider} top-up failed for`, JSON.stringify(row.query), err?.message || err);
+      console.error(`[SISE/bulk] ${provider} top-up failed for`, JSON.stringify(row.query), err?.message || err);
     }
     onChange();
   }

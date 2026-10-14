@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/inaturalist.test.js
-// IMGverse Search — Tests for the iNaturalist observation mapper.
+// SISE — Tests for the iNaturalist observation mapper.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.36
 // =============================================================================
 

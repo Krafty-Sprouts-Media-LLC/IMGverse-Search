@@ -1,10 +1,10 @@
 # =============================================================================
 # tests/compose.override.yml
-# IMGverse Search — Local/CI test overrides (use with main docker-compose.yml).
+# SISE — Local/CI test overrides (use with main docker-compose.yml).
 # Publishes Nginx on TEST_HTTP_PORT (default 18081) for smoke tests.
 # Mirrors KSM WPDokploystack tests/compose.override.yml pattern.
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 

@@ -3,7 +3,7 @@
  * Openverse (browser-side) together and merges the results. Used by the
  * Search tab and, from Part 4, the Bulk keywords tab.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   2.0.0
  */
 
@@ -99,7 +99,7 @@ export async function searchSources({
     ? fetchServerSearch({ q, page, provider: (serverProviders || []).join(','), orientation, fetchImpl })
       .catch((err) => {
         serverError = err.message;
-        console.error('[IMGverse/search]', err.message);
+        console.error('[SISE/search]', err.message);
         return { results: [], hasNext: false, providerStatus: {} };
       })
     : Promise.resolve({ results: [], hasNext: false, providerStatus: {} });
@@ -112,7 +112,7 @@ export async function searchSources({
   const providerStatus = { ...server.providerStatus };
 
   if (ov) {
-    if (ov.error) console.error('[IMGverse/openverse]', ov.error);
+    if (ov.error) console.error('[SISE/openverse]', ov.error);
     providerStatus.openverse = { status: ov.status === 429 ? 'paused' : (ov.error ? 'error' : 'ok') };
   }
 

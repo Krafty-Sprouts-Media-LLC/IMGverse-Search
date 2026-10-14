@@ -1,10 +1,10 @@
 // =============================================================================
 // src/providers/pexels.js
-// IMGverse Search — Pexels provider adapter.
+// SISE — Pexels provider adapter.
 // Requires PEXELS_KEY env var. Free tier: 200 req/hour.
 // Docs: https://www.pexels.com/api/documentation/
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.0
 // =============================================================================
 
@@ -39,7 +39,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
     onResponse?.(res);
 
     if (!res.ok) {
-      console.error(`[IMGverse/pexels] HTTP ${res.status} for q="${query}"`);
+      console.error(`[SISE/pexels] HTTP ${res.status} for q="${query}"`);
       return [];
     }
 
@@ -60,7 +60,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
       })
     );
   } catch (err) {
-    console.error(`[IMGverse/pexels] search failed for q="${query}":`, err.message);
+    console.error(`[SISE/pexels] search failed for q="${query}":`, err.message);
     onError?.(err);
     return [];
   }

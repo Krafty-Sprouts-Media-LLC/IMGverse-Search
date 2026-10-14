@@ -2,7 +2,7 @@
  * Named downloads through /download, one at a time.
  * Shared by the Search tab's batch panel and the Bulk keywords tab.
  *
- * @package IMGverse-Search
+ * @package SISE
  * @since   2.0.0
  */
 
@@ -80,7 +80,7 @@ export async function runDownloadQueue(queue, {
     } catch (err) {
       const error = err?.message || 'Download failed';
       failures.push({ img, name, error });
-      console.error('[IMGverse/batch]', name, error);
+      console.error('[SISE/batch]', name, error);
     }
 
     if (i < total - 1) await sleep(gapMs);

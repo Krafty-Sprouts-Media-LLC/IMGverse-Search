@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/search-all.test.js
-// IMGverse Search — Tests for budget-aware, per-provider-cached search.
+// SISE — Tests for budget-aware, per-provider-cached search.
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   2.0.0
 // =============================================================================
 
@@ -82,7 +82,7 @@ describe('createSearchAll', () => {
     const budget = budgetFor(['pexels']);
     const searchAll = createSearchAll({ providers: [a], budget, cache });
     await searchAll('salmon', 2, [], 'landscape');
-    assert.ok(cache.map.has('imgverse:search:pexels:salmon:2:landscape'));
+    assert.ok(cache.map.has('sise:search:pexels:salmon:2:landscape'));
     const second = await searchAll('salmon', 2, [], 'landscape');
     assert.equal(a.calls.length, 1);
     assert.deepEqual(second.providerStatus.pexels, { status: 'ok', cached: true });

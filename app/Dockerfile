@@ -1,11 +1,11 @@
 # =============================================================================
 # app/Dockerfile
-# IMGverse Search — Node.js application image.
+# SISE — Node.js application image.
 # No build step. npm ci --production only. Starts with node src/server.js.
 # Uses node:20-alpine for minimal size.
 # sharp v0.33+ ships pre-built binaries — no vips compilation needed.
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 

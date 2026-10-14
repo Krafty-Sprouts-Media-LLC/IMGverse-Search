@@ -1,9 +1,9 @@
 // =============================================================================
 // lib/image-proxy.js
-// IMGverse Search — Shared upstream image fetch, whitelist, and encode logic.
+// SISE — Shared upstream image fetch, whitelist, and encode logic.
 // Used by /proxy (inline display) and /download (named attachment).
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.26
 // =============================================================================
 
@@ -54,7 +54,7 @@ export const ALLOWED_DOMAINS = new Set([
 ]);
 
 export const MAX_SIZE_BYTES = (parseInt(process.env.PROXY_MAX_SIZE_MB, 10) || 20) * 1024 * 1024;
-const UA = 'IMGverse-Search/1.0 (image proxy; +https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
+const UA = 'SISE/2.0 (image proxy; +https://github.com/Krafty-Sprouts-Media-LLC/IMGverse-Search)';
 
 /** Default long-edge cap for batch /download when size=web. */
 export function getDownloadMaxWidth() {

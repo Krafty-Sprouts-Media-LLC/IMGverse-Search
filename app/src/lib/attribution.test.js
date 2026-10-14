@@ -1,8 +1,8 @@
 // =============================================================================
 // src/lib/attribution.test.js
-// IMGverse Search — Tests for IPTC caption format (no URLs).
+// SISE — Tests for IPTC caption format (no URLs).
 //
-// @package IMGverse-Search
+// @package SISE
 // @since   1.0.35
 // =============================================================================
 

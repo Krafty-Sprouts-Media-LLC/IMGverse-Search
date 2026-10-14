@@ -1,12 +1,12 @@
 # =============================================================================
 # nginx/Dockerfile
-# IMGverse Search — Nginx reverse proxy image.
+# SISE — Nginx reverse proxy image.
 # Mirrors KSM WPDokploystack nginx/Dockerfile pattern:
 #   - Builds from nginx:alpine
 #   - Uses envsubst for config templating
 #   - Custom entrypoint processes template before starting nginx
 #
-# @package IMGverse-Search
+# @package SISE
 # @since   1.0.0
 # =============================================================================
 
