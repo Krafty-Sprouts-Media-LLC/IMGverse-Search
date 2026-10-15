@@ -5,6 +5,11 @@ All notable changes to SISE (formerly IMGverse Search) will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 15/10/2026
+
+### Fixed
+- **Wikimedia images looked soft in the grid and in the Bulk keywords preview.** They used 330 px thumbnails; they now use 960 px ones (about 150–190 KB each). Downloads were never affected: they always use the original file, resized to at most 1920 px in Web mode and untouched in Full mode, and are never enlarged.
+
 ## [2.1.0] - 15/10/2026
 
 ### Added

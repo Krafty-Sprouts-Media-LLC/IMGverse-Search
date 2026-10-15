@@ -129,6 +129,7 @@ describe('provider adapters', () => {
     let reported = 0;
     const images = await wikimedia('corn', 1, '', { fetchImpl, onResponse: () => { reported += 1; } });
     assert.equal(reported, 1);
+    assert.match(fetchImpl.calls[0], /iiurlwidth=960(&|$)/); // 960 is a size Commons serves; 330 looked soft on screen
     assert.equal(images.length, 1);
     assert.equal(images[0].id, 'wikimedia-1');
     assert.equal(images[0].credit, 'Jo Doe');

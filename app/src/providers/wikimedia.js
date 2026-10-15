@@ -92,7 +92,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
       gsroffset:    String((page - 1) * perPage),
       prop:         'imageinfo',
       iiprop:       'url|size|thumburl|extmetadata|mime',
-      iiurlwidth:   '320',
+      iiurlwidth:   '960', // a size Commons serves; 330 looked soft on screen
     });
 
     const res = await fetchImpl(`${API}?${params}`, {
