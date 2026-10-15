@@ -23,6 +23,7 @@ export const DEFAULT_LIMITS = Object.freeze({
   unsplash:    Object.freeze({ limit: 50,   windowMs: HOUR,   per: 'hour' }), // Demo; Production is 1000 (header wins)
   pixabay:     Object.freeze({ limit: 100,  windowMs: MINUTE, per: 'minute' }),
   inaturalist: Object.freeze({ limit: 60,   windowMs: MINUTE, per: 'minute' }),
+  wikimedia:   Object.freeze({ limit: 60,   windowMs: MINUTE, per: 'minute' }), // polite cap: Commons asks unauthenticated clients to go easy
 });
 
 // Providers whose rate-limit headers describe the same window we count.

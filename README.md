@@ -4,7 +4,7 @@
 
 Self-hosted stock image aggregator with two modes:
 
-- **Search** — one search across Openverse, iNaturalist, Unsplash, Pexels and Pixabay, images served directly from each provider's CDN, with a click-order batch download.
+- **Search** — one search across Openverse, iNaturalist, Unsplash, Pexels, Pixabay and Wikimedia Commons, images served directly from each provider's CDN, with a click-order batch download.
 - **Bulk keywords** — paste a keyword list (e.g. "can you freeze cooked salmon"); each keyword gets its own row with a cleaned search query, the best image is picked for you, and Download saves one file per keyword, named after the keyword. Only rows near where you are reading are searched, and each provider's rate limit is tracked so a paused provider never blocks the run.
 
 Deployed as a single Dokploy Docker Compose stack. Same zero-stress pattern as KSM WPDokploystack.
@@ -26,7 +26,7 @@ Deployed as a single Dokploy Docker Compose stack. Same zero-stress pattern as K
 ```
 User searches "monkey"
   → Browser fetches Openverse directly (avoids Cloudflare on the VPS IP)
-  → Express fans out to Unsplash, Pexels, Pixabay, iNaturalist
+  → Express fans out to Unsplash, Pexels, Pixabay, iNaturalist, Wikimedia Commons
   → Grid thumbnails load directly from provider CDNs (JPEG, WebP, AVIF — whatever the provider serves)
   → "Open full image" links directly to the provider's full-res CDN URL
   → Right-click → Save As → you get the file in the provider's native format
@@ -147,10 +147,11 @@ Only the three API keys matter for most installs; everything else has a sensible
 | `UNSPLASH_RATE_LIMIT` | No | `50` | Unsplash requests per hour (Unsplash's own header wins if it reports a different limit) |
 | `PIXABAY_RATE_LIMIT` | No | `100` | Pixabay requests per minute |
 | `INATURALIST_RATE_LIMIT` | No | `60` | iNaturalist requests per minute |
+| `WIKIMEDIA_RATE_LIMIT` | No | `60` | Wikimedia Commons requests per minute (no key needed; this is a polite cap) |
 | `SISE_VERSION` | No | `latest` | Template deploys only: which image version to pull (e.g. `2.0.2`) |
 | `PROXY_MAX_SIZE_MB` | No | `20` | Maximum proxied image size in MB |
 | `REDIS_MAXMEMORY` | No | `256mb` | Redis memory cap |
-| `FLICKR_KEY`, `OPENVERSE_CLIENT_ID`, `OPENVERSE_CLIENT_SECRET` | No | — | Not used by the app today (Flickr isn't one of the search providers; Openverse is searched from the browser without a key). Safe to omit. |
+| `FLICKR_KEY`, `OPENVERSE_CLIENT_ID`, `OPENVERSE_CLIENT_SECRET` | No | — | Not used by the app today (Flickr isn't one of the search providers, because it needs a key; Openverse is searched from the browser without a key). Safe to omit. |
 
 > **Openverse** is searched from the **browser** so Cloudflare cannot block the VPS. OAuth is not required for this app. Guide for other server-side projects: **[docs/OPENVERSE-OAUTH.md](docs/OPENVERSE-OAUTH.md)**. **iNaturalist** needs no key.
 
@@ -165,7 +166,7 @@ Search Openverse from the user's browser, not from Node. See **[docs/OPENVERSE-O
 | Provider | Key Required | Free Limit | Notes |
 |----------|-------------|------------|-------|
 | Openverse | No (browser search) | Anonymous `page_size` max 20 | Searched from the browser; VPS IP is not used |
-| Wikimedia | No | Unlimited | CC/public domain; no key; best Openverse alternative on VPS |
+| Wikimedia Commons | No | 60 req/min (our cap) | Free-licence / public-domain files, no key. The licence (e.g. CC BY-SA 4.0) shows on the card and in the downloaded file; the author is sometimes missing |
 | Flickr | Yes (free) | Rate limited | CC-licensed photos only — key at flickr.com/services/apps/create |
 | iNaturalist | No | Unlimited | Nature & wildlife photography |
 | Pixabay | Yes (free) | 100 req/hr | Register at pixabay.com/api |

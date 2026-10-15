@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SISE — Stock image search engine</title>
-    <meta name="description" content="Search Openverse, iNaturalist, Unsplash, Pexels and Pixabay at once, or turn a list of keywords into one image per keyword, named after the keyword.">
+    <meta name="description" content="Search Openverse, iNaturalist, Unsplash, Pexels, Pixabay and Wikimedia Commons at once, or turn a list of keywords into one image per keyword, named after the keyword.">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -91,6 +91,7 @@
                     <button type="button" class="chip filter-pill" data-provider="pexels" aria-pressed="false">Pexels</button>
                     <button type="button" class="chip filter-pill" data-provider="inaturalist" aria-pressed="false">iNaturalist</button>
                     <button type="button" class="chip filter-pill" data-provider="pixabay" aria-pressed="false">Pixabay</button>
+                    <button type="button" class="chip filter-pill" data-provider="wikimedia" aria-pressed="false">Wikimedia</button>
                 </div>
                 <div class="chips" role="group" aria-label="Filter by orientation">
                     <span class="filter-label">Orientation</span>
@@ -103,7 +104,7 @@
 
             <div id="empty-state" class="empty-state" aria-live="polite">
                 <h2>Search one term across every provider</h2>
-                <p>Openverse, iNaturalist, Unsplash, Pexels and Pixabay, 20 per provider, per page. For a list of keywords, use the Bulk keywords tab.</p>
+                <p>Openverse, iNaturalist, Unsplash, Pexels, Pixabay and Wikimedia Commons, 20 per provider, per page. For a list of keywords, use the Bulk keywords tab.</p>
             </div>
 
             <div id="grid" class="grid" aria-label="Search results" aria-live="polite"></div>

@@ -14,6 +14,8 @@ import { search as unsplash, trackDownload } from '../providers/unsplash.js';
 import { search as pexels } from '../providers/pexels.js';
 import { search as pixabay } from '../providers/pixabay.js';
 import { search as inaturalist } from '../providers/inaturalist.js';
+import { search as wikimedia } from '../providers/wikimedia.js';
+import { PROVIDERS } from '../providers/index.js';
 
 function fakeFetch(body, { status = 200, headers = {} } = {}) {
   const calls = [];
@@ -113,6 +115,56 @@ describe('provider adapters', () => {
     const images = await pexels('rice', 1, '', { fetchImpl });
     assert.deepEqual(images, []);
     assert.match(errors[0], /^\[SISE\/pexels\] search failed for q="rice": socket hang up/);
+  });
+
+  it('wikimedia maps files, strips author HTML, skips SVG, and reports the response', async () => {
+    const fetchImpl = fakeFetch({ query: { pages: {
+      1: { pageid: 1, title: 'File:Corn.jpg', imageinfo: [{
+        url: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Corn.jpg', thumburl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Corn.jpg/330px-Corn.jpg',
+        width: 4000, height: 3000, mime: 'image/jpeg', descriptionurl: 'https://commons.wikimedia.org/wiki/File:Corn.jpg',
+        extmetadata: { Artist: { value: '<a href="x">Jo Doe</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' } },
+      }] },
+      2: { pageid: 2, title: 'File:Logo.svg', imageinfo: [{ url: 'https://upload.wikimedia.org/wikipedia/commons/c/cd/Logo.svg', mime: 'image/svg+xml' }] },
+    } } });
+    let reported = 0;
+    const images = await wikimedia('corn', 1, '', { fetchImpl, onResponse: () => { reported += 1; } });
+    assert.equal(reported, 1);
+    assert.equal(images.length, 1);
+    assert.equal(images[0].id, 'wikimedia-1');
+    assert.equal(images[0].credit, 'Jo Doe');
+    assert.equal(images[0].license, 'CC BY-SA 4.0');
+    assert.equal(images[0].full, 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Corn.jpg');
+  });
+
+  it('wikimedia shortens an author field that holds a paragraph of licence instructions', async () => {
+    const long = 'own work by me, Grand-Duc.   Die volle Nennung des Autorenpseudonyms und der Zuschreibung wie unten stehend ist für eine Lizenz-konforme Nutzung erforderlich. For a license-compliant use you must use my pseudonym.';
+    const fetchImpl = fakeFetch({ query: { pages: { 1: { pageid: 1, title: 'File:A.jpg', imageinfo: [{
+      url: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/A.jpg', width: 800, height: 600, mime: 'image/jpeg',
+      descriptionurl: 'https://commons.wikimedia.org/wiki/File:A.jpg', extmetadata: { Artist: { value: long } },
+    }] } } } });
+    const [img] = await wikimedia('a', 1, '', { fetchImpl });
+    assert.ok(img.credit.length <= 100);
+    assert.ok(img.credit.endsWith('…'));
+    assert.match(img.credit, /^own work by me, Grand-Duc\. Die volle/);
+    assert.equal(img.creditUrl, 'https://commons.wikimedia.org/wiki/File:A.jpg');
+  });
+
+  it('wikimedia logs, reports and returns [] on a non-OK response or a network failure', async () => {
+    let status = 0;
+    assert.deepEqual(await wikimedia('x', 1, '', { fetchImpl: fakeFetch({}, { status: 429 }), onResponse: (res) => { status = res.status; } }), []);
+    assert.equal(status, 429);
+    assert.match(errors[0], /^\[SISE\/wikimedia\] API returned HTTP 429 for q="x"/);
+    let failed = false;
+    const boom = async () => { throw new Error('offline'); };
+    assert.deepEqual(await wikimedia('x', 1, '', { fetchImpl: boom, onError: () => { failed = true; } }), []);
+    assert.equal(failed, true);
+  });
+
+  it('wikimedia is registered as a keyless provider', () => {
+    const entry = PROVIDERS.find((p) => p.name === 'wikimedia');
+    assert.ok(entry);
+    assert.equal(entry.configured, undefined);
+    assert.equal(entry.nativeOrientation, false);
   });
 
   it('inaturalist reports the response and ignores orientation', async () => {

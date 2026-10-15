@@ -41,6 +41,7 @@ describe('DEFAULT_LIMITS', () => {
     assert.deepEqual(DEFAULT_LIMITS.unsplash,    { limit: 50,   windowMs: HOUR,   per: 'hour' });
     assert.deepEqual(DEFAULT_LIMITS.pixabay,     { limit: 100,  windowMs: MINUTE, per: 'minute' });
     assert.deepEqual(DEFAULT_LIMITS.inaturalist, { limit: 60,   windowMs: MINUTE, per: 'minute' });
+    assert.deepEqual(DEFAULT_LIMITS.wikimedia,   { limit: 60,   windowMs: MINUTE, per: 'minute' });
   });
 });
 

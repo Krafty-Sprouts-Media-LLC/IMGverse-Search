@@ -24,6 +24,7 @@ import { search as inaturalist } from './inaturalist.js';
 import { search as unsplash    } from './unsplash.js';
 import { search as pexels      } from './pexels.js';
 import { search as pixabay     } from './pixabay.js';
+import { search as wikimedia   } from './wikimedia.js';
 import { interleave, dedupeResults } from '../utils.js';
 import { filterByOrientation } from '../../public/image-shape.js';
 import { get as cacheGet, set as cacheSet } from '../cache.js';
@@ -143,6 +144,7 @@ export const budget = createRateBudget({ limits: limitsFromEnv() });
 // `configured` keeps keyless providers out of searches, budgets and the UI.
 export const PROVIDERS = [
   { name: 'inaturalist', search: inaturalist, nativeOrientation: false },
+  { name: 'wikimedia',   search: wikimedia,   nativeOrientation: false }, // keyless: Commons has no API key
   { name: 'unsplash',    search: unsplash,    nativeOrientation: true, configured: () => Boolean(process.env.UNSPLASH_KEY) },
   { name: 'pexels',      search: pexels,      nativeOrientation: true, configured: () => Boolean(process.env.PEXELS_KEY) },
   { name: 'pixabay',     search: pixabay,     nativeOrientation: true, configured: () => Boolean(process.env.PIXABAY_KEY) },

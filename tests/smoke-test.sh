@@ -98,7 +98,7 @@ pass "/api/providers/status lists provider budgets"
 
 info "Testing /proxy with an Openverse image URL..."
 # Use a known stable public JPEG from a whitelisted domain for the proxy test
-TEST_IMG_URL=$(echo -n "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/320px-Cat03.jpg" | python3 -c "import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read()))")
+TEST_IMG_URL=$(echo -n "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg" | python3 -c "import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read()))")
 CONTENT_TYPE=$(curl -s -o /dev/null -w "%{content_type}" "${BASE_URL}/proxy?url=${TEST_IMG_URL}")
 echo "${CONTENT_TYPE}" | grep -q "image/jpeg" || fail "/proxy did not return image/jpeg, got: ${CONTENT_TYPE}"
 pass "/proxy returned image/jpeg"

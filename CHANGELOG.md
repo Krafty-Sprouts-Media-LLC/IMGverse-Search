@@ -5,6 +5,16 @@ All notable changes to SISE (formerly IMGverse Search) will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 15/10/2026
+
+### Added
+- **Wikimedia Commons is now a search provider** (Search and Bulk keywords), with no API key. Commons only hosts free-licence and public-domain files; the licence (for example "CC BY-SA 4.0") and the author, when Commons has one, show on the card and go into the downloaded file's caption. Some files have no author listed, so those cards show the licence only. Commons has a **Wikimedia** filter pill in Search and appears in the Bulk tab's provider list.
+- Long Commons author fields (some authors paste a paragraph of licence instructions there) are shortened to 100 characters on the card and in the file caption; the linked Commons page has the full attribution text.
+- Wikimedia requests are capped at 60 a minute (`WIKIMEDIA_RATE_LIMIT` to change it), and a Commons outage now shows as an error or pause for that provider instead of looking like "no results".
+
+### Fixed
+- The smoke test's `/proxy` image check used a Commons thumbnail URL that doesn't exist (HTTP 400), so it always failed. It now uses a real original file.
+
 ## [2.0.4] - 14/10/2026
 
 ### Fixed

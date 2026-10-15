@@ -2,7 +2,7 @@
   {
     "id": "sise",
     "name": "SISE",
-    "version": "2.0.4",
+    "version": "2.1.0",
     "description": "SISE (Stock image search engine): self-hosted stock image aggregator. Searches Openverse, iNaturalist, Unsplash, Pexels and Pixabay at once, and turns keyword lists into one image per keyword, named after the keyword.",
     "logo": "sise.svg",
     "links": {

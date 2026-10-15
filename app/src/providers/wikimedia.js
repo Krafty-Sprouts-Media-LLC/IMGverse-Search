@@ -1,7 +1,8 @@
 // =============================================================================
 // src/providers/wikimedia.js
 // SISE — Wikimedia Commons provider adapter.
-// Free, no API key. CC-licensed / public domain media.
+// Free, no API key. CC-licensed / public domain media (Commons only hosts free files).
+// Licence and author come from Commons' own metadata; the author can be missing.
 // Docs: https://www.mediawiki.org/wiki/API:Search
 //
 // @package SISE
@@ -53,14 +54,31 @@ function originalCommonsUrl(info, title) {
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
 }
 
+const CREDIT_MAX = 100;
+
+/**
+ * Some authors put a paragraph of licence instructions in the Artist field.
+ * Keep the card and the file caption readable; the Commons page we link to
+ * (creditUrl) carries the full attribution text.
+ *
+ * @param {string} [text]
+ * @returns {string}
+ */
+function shortenCredit(text) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  return clean.length > CREDIT_MAX ? `${clean.slice(0, CREDIT_MAX - 1).trimEnd()}…` : clean;
+}
+
 /**
  * Search Wikimedia Commons for images matching the given query.
  *
- * @param {string} query - Search term.
- * @param {number} page  - Page number (1-indexed).
+ * @param {string} query       - Search term.
+ * @param {number} page        - Page number (1-indexed).
+ * @param {string} orientation - Ignored: Commons has no orientation filter (filtered after the search).
+ * @param {object} [options]   - { onResponse(res), onError(err), fetchImpl } — used by the rate budget and tests.
  * @returns {Promise<object[]>} Array of canonical ImageResult objects.
  */
-export async function search(query, page = 1) {
+export async function search(query, page = 1, orientation = '', { onResponse, onError, fetchImpl = fetch } = {}) {
   try {
     const perPage = 20;
     const params = new URLSearchParams({
@@ -77,10 +95,11 @@ export async function search(query, page = 1) {
       iiurlwidth:   '320',
     });
 
-    const res = await fetch(`${API}?${params}`, {
+    const res = await fetchImpl(`${API}?${params}`, {
       headers: { 'User-Agent': UA },
       signal:  AbortSignal.timeout(15_000),
     });
+    onResponse?.(res);
 
     if (!res.ok) {
       console.error(`[SISE/wikimedia] API returned HTTP ${res.status} for q="${query}" page=${page}`);
@@ -99,7 +118,7 @@ export async function search(query, page = 1) {
         if (!mime.startsWith('image/') || mime === 'image/svg+xml') return null;
 
         const meta    = info.extmetadata || {};
-        const artist  = meta.Artist?.value?.replace(/<[^>]+>/g, '').trim() || '';
+        const artist  = shortenCredit(meta.Artist?.value?.replace(/<[^>]+>/g, ''));
         const license = meta.LicenseShortName?.value || 'See Wikimedia Commons';
 
         const fullUrl  = originalCommonsUrl(info, item.title);
@@ -122,6 +141,7 @@ export async function search(query, page = 1) {
       .filter(Boolean);
   } catch (err) {
     console.error(`[SISE/wikimedia] Search failed for q="${query}" page=${page}:`, err.message);
+    onError?.(err);
     return [];
   }
 }
