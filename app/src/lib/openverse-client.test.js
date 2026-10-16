@@ -57,6 +57,7 @@ describe('mapOpenverseItem', () => {
       creator: 'Ann',
       creator_url: 'https://example.com/ann',
       license: 'by',
+      license_version: '4.0',
       foreign_landing_url: 'https://flickr.com/photo',
       width: 1024,
       height: 768,
@@ -69,7 +70,7 @@ describe('mapOpenverseItem', () => {
     assert.equal(mapped.alt, 'Birds');
     assert.equal(mapped.credit, 'Ann');
     assert.equal(mapped.creditUrl, 'https://example.com/ann');
-    assert.equal(mapped.license, 'by');
+    assert.equal(mapped.license, 'CC BY 4.0');
     assert.equal(mapped.sourceUrl, 'https://flickr.com/photo');
     assert.equal(mapped.width, 1024);
     assert.equal(mapped.height, 768);

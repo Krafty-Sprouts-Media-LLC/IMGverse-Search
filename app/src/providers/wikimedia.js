@@ -54,19 +54,46 @@ function originalCommonsUrl(info, title) {
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
 }
 
-const CREDIT_MAX = 100;
+const CREDIT_MAX = 60;
+
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+/** Decode the few HTML entities Commons leaves in its metadata (&amp;, &#39; ...). */
+function decodeEntities(text) {
+  return text.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (whole, body) => {
+    if (body[0] === '#') {
+      const code = body[1].toLowerCase() === 'x' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+      return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : whole;
+    }
+    return ENTITIES[body.toLowerCase()] ?? whole;
+  });
+}
+
+function tidy(html) {
+  return decodeEntities(String(html || '').replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+}
 
 /**
- * Some authors put a paragraph of licence instructions in the Artist field.
- * Keep the card and the file caption readable; the Commons page we link to
- * (creditUrl) carries the full attribution text.
+ * The author to credit from a Commons Artist field (HTML).
  *
- * @param {string} [text]
+ * Authors often wrap their name in a paragraph of licence instructions, so a
+ * link to their Commons user page (its text is the clean username) wins over
+ * the text around it. Otherwise the plain text is used, cut on a word boundary
+ * past 60 characters; the Commons page we link to (creditUrl) carries the full
+ * attribution text.
+ *
+ * @param {string} [html]
  * @returns {string}
  */
-function shortenCredit(text) {
-  const clean = String(text || '').replace(/\s+/g, ' ').trim();
-  return clean.length > CREDIT_MAX ? `${clean.slice(0, CREDIT_MAX - 1).trimEnd()}…` : clean;
+function cleanArtist(html) {
+  const raw = String(html || '');
+  const userLink = raw.match(/<a\s[^>]*href="[^"]*\/wiki\/User:[^"]*"[^>]*>([^<]+)<\/a>/i);
+  const text = tidy(userLink ? userLink[1] : raw).replace(/^user:\s*/i, '');
+  if (text.length <= CREDIT_MAX) return text;
+
+  const cut = text.slice(0, CREDIT_MAX - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
 /**
@@ -118,7 +145,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
         if (!mime.startsWith('image/') || mime === 'image/svg+xml') return null;
 
         const meta    = info.extmetadata || {};
-        const artist  = shortenCredit(meta.Artist?.value?.replace(/<[^>]+>/g, ''));
+        const artist  = cleanArtist(meta.Artist?.value);
         const license = meta.LicenseShortName?.value || '';
 
         const fullUrl  = originalCommonsUrl(info, item.title);

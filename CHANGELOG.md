@@ -5,6 +5,16 @@ All notable changes to SISE (formerly IMGverse Search) will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.3] - 16/10/2026
+
+### Added
+- **Licence for iNaturalist and Openverse photos**, on the card and in the downloaded file's caption, the same way as Wikimedia Commons: *Photo by <name> · CC BY-NC* on the card and *Photo by <name> / iNaturalist (CC BY-NC)* in the file. Openverse shows its version too (*CC BY-SA 4.0*). The stock providers (Unsplash, Pexels, Pixabay) are unchanged, as their own licences don't require it. The Bulk preview line shows the licence as well.
+
+### Fixed
+- **Long or messy Wikimedia author fields.** When the author field links to the author's Commons user page, the clean username is now used instead of the paragraph around it; HTML entities such as `&amp;` are decoded; and anything still over 60 characters is cut on a word boundary. Text with no link (for example "thank you one million views") cannot be told from a real name, so it is kept, shortened if long; the card's link goes to the full attribution on Commons.
+- **Backstop for every provider:** a credit over 80 characters is cut short in the file caption.
+- iNaturalist photos with no licence code were previously labelled "cc"; they now show no licence.
+
 ## [2.1.2] - 16/10/2026
 
 ### Fixed

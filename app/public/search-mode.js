@@ -15,6 +15,7 @@ import {
     formatBatchFinishMessage,
 } from './batch-helpers.js?v=1.0.34';
 import { downloadImage, runDownloadQueue } from './download-queue.js?v=2.0.0';
+import { LICENCE_PROVIDERS } from './image-meta.js?v=2.0.2';
 import {
     storageGet,
     storageGetJSON,
@@ -525,6 +526,8 @@ function updatePagination(totalOnPage) {
 // Unsplash API guidelines: credit links back to Unsplash carry the app name.
 const UNSPLASH_URL = 'https://unsplash.com/?utm_source=sise&utm_medium=referral';
 
+const showsLicence = (img) => LICENCE_PROVIDERS.has(img.provider) && Boolean(img.license);
+
 function renderCards(results) {
     results.forEach((img) => {
         const figure = document.createElement('figure');
@@ -549,7 +552,7 @@ function renderCards(results) {
                     <span class="provider-badge">${escHtml(img.provider)}</span>
                 </div>
                 <div class="card-bottom">
-                    ${img.credit ? `<p class="card-credit">Photo by <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a>${img.provider === 'unsplash' ? ` on <a href="${UNSPLASH_URL}" target="_blank" rel="noopener">Unsplash</a>` : ''}${img.provider === 'wikimedia' && img.license ? ` · ${escHtml(img.license)}` : ''}</p>` : (img.provider === 'wikimedia' && img.license ? `<p class="card-credit">${escHtml(img.license)}</p>` : '')}
+                    ${img.credit ? `<p class="card-credit">Photo by <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a>${img.provider === 'unsplash' ? ` on <a href="${UNSPLASH_URL}" target="_blank" rel="noopener">Unsplash</a>` : ''}${showsLicence(img) ? ` · ${escHtml(img.license)}` : ''}</p>` : (showsLicence(img) ? `<p class="card-credit">${escHtml(img.license)}</p>` : '')}
                     <a
                         class="btn-open${opened ? ' btn-open--opened' : ''}"
                         href="${escHtml(img.full)}"

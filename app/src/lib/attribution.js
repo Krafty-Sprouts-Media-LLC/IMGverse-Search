@@ -11,6 +11,8 @@
 
 'use strict';
 
+import { LICENCE_PROVIDERS } from '../../public/image-meta.js';
+
 import { randomBytes } from 'node:crypto';
 import { unlink, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -28,6 +30,7 @@ const PROVIDER_LABELS = {
 };
 
 const CAPTION_MAX = 2000;
+const CREDIT_MAX = 80;
 
 /**
  * @param {string} provider
@@ -44,9 +47,11 @@ export function formatProviderName(provider) {
  * Build a single-line attribution string for IPTC Caption-Abstract.
  * Matches IMGVerse WordPress: Photo by {creator} / {source}.
  * Never includes a photo URL or license dump — WordPress copies IPTC Caption
- * into the attachment caption / figcaption. The one exception is Wikimedia
- * Commons: most of its files are CC BY / BY-SA, which require naming the
- * licence, so its short licence name is appended: "... / Wikimedia Commons (CC BY-SA 4.0)".
+ * into the attachment caption / figcaption. The exception is the providers in
+ * LICENCE_PROVIDERS (Wikimedia Commons, iNaturalist, Openverse): their files are
+ * mostly CC BY / BY-SA, which require naming the licence, so its short name is
+ * appended: "... / Wikimedia Commons (CC BY-SA 4.0)". A credit over 80
+ * characters is cut short so a paragraph in the author field can't flood the file.
  *
  * @param {object} fields
  * @param {string} [fields.credit]
@@ -59,9 +64,10 @@ export function buildAttributionCaption({
   provider = '',
   license = '',
 } = {}) {
-  const licenceName = String(provider).trim().toLowerCase() === 'wikimedia' ? String(license || '').trim() : '';
+  const licenceName = LICENCE_PROVIDERS.has(String(provider).trim().toLowerCase()) ? String(license || '').trim() : '';
   const providerLabel = [formatProviderName(provider), licenceName && `(${licenceName})`].filter(Boolean).join(' ');
-  const author = String(credit || '').trim();
+  const full = String(credit || '').replace(/\s+/g, ' ').trim();
+  const author = full.length > CREDIT_MAX ? `${full.slice(0, CREDIT_MAX - 1).trimEnd()}…` : full;
 
   if (author && providerLabel) {
     return `Photo by ${author} / ${providerLabel}`;

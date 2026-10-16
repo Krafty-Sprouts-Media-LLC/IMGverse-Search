@@ -13,6 +13,7 @@
 'use strict';
 
 import { filterByOrientation } from './image-shape.js?v=2.0.0';
+import { formatLicence } from './image-meta.js?v=2.0.2';
 
 export { filterByOrientation };
 
@@ -62,7 +63,7 @@ export function mapOpenverseItem(raw) {
     alt:       raw.title || '',
     credit:    raw.creator || '',
     creditUrl: raw.creator_url || '',
-    license:   raw.license || '',
+    license:   formatLicence(raw.license, raw.license_version),
     sourceUrl: raw.foreign_landing_url || '',
   };
 }

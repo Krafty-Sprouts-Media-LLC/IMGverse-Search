@@ -15,7 +15,7 @@ import { isSmall, shapeOf } from './image-shape.js?v=2.0.0';
 import { downloadImage, runDownloadQueue } from './download-queue.js?v=2.0.0';
 import { formatBatchFailureLine, formatBatchFinishMessage } from './batch-helpers.js?v=1.0.34';
 import { storageGetJSON, storageSet } from './safe-storage.js?v=2.0.0';
-import { describeImage, imageTitle, providerName } from './image-meta.js?v=2.0.2';
+import { LICENCE_PROVIDERS, describeImage, imageTitle, providerName } from './image-meta.js?v=2.0.2';
 
 const STORAGE_KEY = 'sise:bulk';
 const PER_ROW = 6;
@@ -618,6 +618,7 @@ function renderPreview() {
     els.pvMeta.textContent = [
         img.credit ? `Photo by ${img.credit}` : '',
         providerName(img.provider),
+        LICENCE_PROVIDERS.has(img.provider) ? img.license : '',
         img.width ? `${img.width}×${img.height}` : 'size unknown',
         shape,
         isSmall(img) ? 'under 1000px' : '',

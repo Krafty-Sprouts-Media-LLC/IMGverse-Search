@@ -144,10 +144,33 @@ describe('provider adapters', () => {
       descriptionurl: 'https://commons.wikimedia.org/wiki/File:A.jpg', extmetadata: { Artist: { value: long } },
     }] } } } });
     const [img] = await wikimedia('a', 1, '', { fetchImpl });
-    assert.ok(img.credit.length <= 100);
+    assert.ok(img.credit.length <= 60);
     assert.ok(img.credit.endsWith('…'));
-    assert.match(img.credit, /^own work by me, Grand-Duc\. Die volle/);
+    assert.ok(img.credit.startsWith('own work by me, Grand-Duc.'));
+    assert.equal(img.credit.includes('  '), false);
     assert.equal(img.creditUrl, 'https://commons.wikimedia.org/wiki/File:A.jpg');
+  });
+
+  it('wikimedia prefers the linked username over the paragraph around it, and decodes entities', async () => {
+    const row = (id, artist) => ({ pageid: id, title: `File:${id}.jpg`, imageinfo: [{
+      url: `https://upload.wikimedia.org/wikipedia/commons/a/ab/${id}.jpg`, width: 800, height: 600, mime: 'image/jpeg',
+      descriptionurl: `https://commons.wikimedia.org/wiki/File:${id}.jpg`, extmetadata: { Artist: { value: artist } },
+    }] });
+    const fetchImpl = fakeFetch({ query: { pages: {
+      1: row(1, 'own work by me, <a href="//commons.wikimedia.org/wiki/User:Grand-Duc" title="User:Grand-Duc">Grand-Duc</a>. Die volle Nennung ist erforderlich, thank you one million views'),
+      2: row(2, '<a href="//commons.wikimedia.org/wiki/User:Flicka">user: Flicka</a>'),
+      3: row(3, 'Smith &amp; Sons &quot;Studio&quot;'),
+      4: row(4, 'Jim D. Griggs, HVO (USGS) staff photographer and a very long list of other people involved in the work'),
+    } } });
+    const images = await wikimedia('a', 1, '', { fetchImpl });
+    const byId = Object.fromEntries(images.map((i) => [i.id, i.credit]));
+    assert.equal(byId['wikimedia-1'], 'Grand-Duc');
+    assert.equal(byId['wikimedia-2'], 'Flicka');
+    assert.equal(byId['wikimedia-3'], 'Smith & Sons "Studio"');
+    assert.ok(byId['wikimedia-4'].length <= 60);
+    assert.ok(byId['wikimedia-4'].endsWith('…'));
+    assert.equal(/\s…$/.test(byId['wikimedia-4']), false); // no dangling space before the ellipsis
+    assert.ok(byId['wikimedia-4'].slice(0, -1).split(' ').every((w) => ['Jim', 'D.', 'Griggs,', 'HVO', '(USGS)', 'staff', 'photographer', 'and', 'a', 'very', 'long', 'list', 'of', 'other', 'people'].includes(w))); // cut on a word boundary
   });
 
   it('wikimedia logs, reports and returns [] on a non-OK response or a network failure', async () => {

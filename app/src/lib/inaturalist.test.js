@@ -37,6 +37,13 @@ describe('mapObservations', () => {
     assert.match(img.full, /\/original\.jpg$/);
   });
 
+  it('writes the photo licence as readable text, and none when the code is missing', () => {
+    const [a] = mapObservations([obs(1, [{ ...photo(30), license_code: 'cc-by-nc' }])]);
+    assert.equal(a.license, 'CC BY-NC');
+    const [b] = mapObservations([obs(1, [{ ...photo(31), license_code: null }])]);
+    assert.equal(b.license, '');
+  });
+
   it('keeps size unknown (0) when original_dimensions is missing', () => {
     const [img] = mapObservations([obs(1, [photo(11)])]);
     assert.equal(img.width, 0);

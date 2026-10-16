@@ -54,6 +54,25 @@ describe('buildAttributionCaption', () => {
     );
   });
 
+  it('adds the licence for iNaturalist and Openverse too', () => {
+    assert.equal(
+      buildAttributionCaption({ credit: 'ann', provider: 'inaturalist', license: 'CC BY-NC' }),
+      'Photo by ann / iNaturalist (CC BY-NC)'
+    );
+    assert.equal(
+      buildAttributionCaption({ credit: 'Bo', provider: 'openverse', license: 'CC BY-SA 4.0' }),
+      'Photo by Bo / Openverse (CC BY-SA 4.0)'
+    );
+  });
+
+  it('caps an overlong credit at 80 characters, whatever the provider', () => {
+    const caption = buildAttributionCaption({ credit: 'thank you one million views '.repeat(10), provider: 'openverse' });
+    assert.ok(caption.startsWith('Photo by thank you one million views'));
+    assert.ok(caption.endsWith(' / Openverse'));
+    assert.ok(caption.length <= 'Photo by '.length + 80 + ' / Openverse'.length);
+    assert.ok(caption.includes('…'));
+  });
+
   it('leaves the licence off when Wikimedia has none to report, and for other providers', () => {
     assert.equal(
       buildAttributionCaption({ credit: 'Jo Doe', provider: 'wikimedia', license: '' }),

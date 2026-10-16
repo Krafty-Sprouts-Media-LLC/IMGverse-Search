@@ -10,7 +10,27 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { describeImage, imageTitle, providerName } from '../../public/image-meta.js';
+import { LICENCE_PROVIDERS, describeImage, formatLicence, imageTitle, providerName } from '../../public/image-meta.js';
+
+describe('formatLicence', () => {
+  it('writes Creative Commons codes the way people read them', () => {
+    assert.equal(formatLicence('by-sa', '4.0'), 'CC BY-SA 4.0');
+    assert.equal(formatLicence('cc-by-nc'), 'CC BY-NC');
+    assert.equal(formatLicence('by-nc-nd', '2.0'), 'CC BY-NC-ND 2.0');
+    assert.equal(formatLicence('cc0'), 'CC0');
+    assert.equal(formatLicence('pdm'), 'Public Domain Mark');
+  });
+  it('returns nothing for blank, generic or unknown codes', () => {
+    assert.equal(formatLicence(''), '');
+    assert.equal(formatLicence(undefined), '');
+    assert.equal(formatLicence('cc'), '');
+    assert.equal(formatLicence('something-else'), '');
+  });
+  it('names the providers whose licence must be shown', () => {
+    for (const p of ['wikimedia', 'inaturalist', 'openverse']) assert.ok(LICENCE_PROVIDERS.has(p), p);
+    assert.equal(LICENCE_PROVIDERS.has('unsplash'), false);
+  });
+});
 
 describe('providerName', () => {
   it('names the known providers', () => {

@@ -12,6 +12,7 @@
 
 import fetch from 'node-fetch';
 import { normalize } from '../utils.js';
+import { formatLicence } from '../../public/image-meta.js';
 
 const BASE = 'https://api.inaturalist.org/v1/observations';
 
@@ -87,7 +88,7 @@ export function mapObservations(observations) {
           alt:       obs.species_guess || obs.taxon?.name || 'Nature photo',
           credit:    obs.user?.login || '',
           creditUrl: obs.user ? `https://www.inaturalist.org/people/${obs.user.login}` : '',
-          license:   photo.license_code || 'cc',
+          license:   formatLicence(photo.license_code),
           sourceUrl: `https://www.inaturalist.org/observations/${obs.id}`,
         })
       );
