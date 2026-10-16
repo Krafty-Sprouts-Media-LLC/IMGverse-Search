@@ -119,7 +119,7 @@ export async function search(query, page = 1, orientation = '', { onResponse, on
 
         const meta    = info.extmetadata || {};
         const artist  = shortenCredit(meta.Artist?.value?.replace(/<[^>]+>/g, ''));
-        const license = meta.LicenseShortName?.value || 'See Wikimedia Commons';
+        const license = meta.LicenseShortName?.value || '';
 
         const fullUrl  = originalCommonsUrl(info, item.title);
         const thumbUrl = info.thumburl || fullUrl;

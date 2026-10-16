@@ -549,7 +549,7 @@ function renderCards(results) {
                     <span class="provider-badge">${escHtml(img.provider)}</span>
                 </div>
                 <div class="card-bottom">
-                    ${img.credit ? `<p class="card-credit">Photo by <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a>${img.provider === 'unsplash' ? ` on <a href="${UNSPLASH_URL}" target="_blank" rel="noopener">Unsplash</a>` : ''}</p>` : ''}
+                    ${img.credit ? `<p class="card-credit">Photo by <a href="${escHtml(img.creditUrl)}" target="_blank" rel="noopener">${escHtml(img.credit)}</a>${img.provider === 'unsplash' ? ` on <a href="${UNSPLASH_URL}" target="_blank" rel="noopener">Unsplash</a>` : ''}${img.provider === 'wikimedia' && img.license ? ` · ${escHtml(img.license)}` : ''}</p>` : (img.provider === 'wikimedia' && img.license ? `<p class="card-credit">${escHtml(img.license)}</p>` : '')}
                     <a
                         class="btn-open${opened ? ' btn-open--opened' : ''}"
                         href="${escHtml(img.full)}"

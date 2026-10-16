@@ -44,18 +44,23 @@ export function formatProviderName(provider) {
  * Build a single-line attribution string for IPTC Caption-Abstract.
  * Matches IMGVerse WordPress: Photo by {creator} / {source}.
  * Never includes a photo URL or license dump — WordPress copies IPTC Caption
- * into the attachment caption / figcaption.
+ * into the attachment caption / figcaption. The one exception is Wikimedia
+ * Commons: most of its files are CC BY / BY-SA, which require naming the
+ * licence, so its short licence name is appended: "... / Wikimedia Commons (CC BY-SA 4.0)".
  *
  * @param {object} fields
  * @param {string} [fields.credit]
  * @param {string} [fields.provider]
+ * @param {string} [fields.license]  Only used for Wikimedia Commons.
  * @returns {string}
  */
 export function buildAttributionCaption({
   credit = '',
   provider = '',
+  license = '',
 } = {}) {
-  const providerLabel = formatProviderName(provider);
+  const licenceName = String(provider).trim().toLowerCase() === 'wikimedia' ? String(license || '').trim() : '';
+  const providerLabel = [formatProviderName(provider), licenceName && `(${licenceName})`].filter(Boolean).join(' ');
   const author = String(credit || '').trim();
 
   if (author && providerLabel) {

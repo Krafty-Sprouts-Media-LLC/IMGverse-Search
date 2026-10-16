@@ -5,6 +5,11 @@ All notable changes to SISE (formerly IMGverse Search) will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 16/10/2026
+
+### Fixed
+- **Wikimedia Commons licence is now shown and kept in the file.** Most Commons files are CC BY or CC BY-SA, which require naming the licence, but the licence appeared neither on the card nor in the downloaded file (the 2.1.0 notes said it did; that was wrong). The card now reads *Photo by <author> · CC BY-SA 4.0*, and the file's caption reads *Photo by <author> / Wikimedia Commons (CC BY-SA 4.0)*. Other providers' captions are unchanged. A Commons file with no licence name simply omits it.
+
 ## [2.1.1] - 15/10/2026
 
 ### Fixed
